@@ -8,6 +8,9 @@ import kotlinx.datetime.LocalDate
 interface TransactionRepository {
     fun observeTransactions(): Flow<List<Transaction>>
 
+    /** True until the first successful load completes; false from then on. */
+    fun observeIsLoading(): Flow<Boolean>
+
     suspend fun addTransaction(
         type: TransactionType,
         amount: Double,

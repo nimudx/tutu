@@ -36,8 +36,10 @@ class HomeViewModel(
     val uiState: StateFlow<HomeUiState> = combine(
         transactionRepository.observeTransactions(),
         categoryRepository.observeCategories(),
-    ) { transactions, categories ->
-        buildUiState(transactions, categories)
+        transactionRepository.observeIsLoading(),
+        categoryRepository.observeIsLoading(),
+    ) { transactions, categories, transactionsLoading, categoriesLoading ->
+        buildUiState(transactions, categories, transactionsLoading || categoriesLoading)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -69,7 +71,13 @@ class HomeViewModel(
         }
     }
 
-    private fun buildUiState(transactions: List<Transaction>, categories: List<Category>): HomeUiState {
+    private fun buildUiState(
+        transactions: List<Transaction>,
+        categories: List<Category>,
+        isLoading: Boolean,
+    ): HomeUiState {
+        if (isLoading) return HomeUiState(isLoading = true)
+
         val categoriesById = categories.associateBy { it.id }
         val income = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
         val expense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }

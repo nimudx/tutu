@@ -19,6 +19,8 @@ data class TutuColors(
     val income: Color = Color(0xFF3ECF7A),
     val expense: Color = Color(0xFFFF6B6B),
     val expenseStrong: Color = Color(0xFFF0555F),
+    val skeletonBase: Color,
+    val skeletonHighlight: Color,
 )
 
 val TutuDarkColors = TutuColors(
@@ -33,6 +35,8 @@ val TutuDarkColors = TutuColors(
     tabBarBg = Color(0xEB141518),
     toastBg = Color(0xFF2A2C30),
     toastBorder = Color(0x1AFFFFFF),
+    skeletonBase = Color(0x0FFFFFFF),
+    skeletonHighlight = Color(0x26FFFFFF),
 )
 
 val TutuLightColors = TutuColors(
@@ -47,6 +51,8 @@ val TutuLightColors = TutuColors(
     tabBarBg = Color(0xD9FFFFFF),
     toastBg = Color(0xFFFFFFFF),
     toastBorder = Color(0x14000000),
+    skeletonBase = Color(0x0D000000),
+    skeletonHighlight = Color(0x1C000000),
 )
 
 val LocalTutuColors = staticCompositionLocalOf { TutuDarkColors }

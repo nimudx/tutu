@@ -14,8 +14,11 @@ class FakeTransactionRepository : TransactionRepository {
 
     private val nextId = AtomicLong(seedTransactions.size + 1L)
     private val transactions = MutableStateFlow(seedTransactions)
+    private val isLoading = MutableStateFlow(false)
 
     override fun observeTransactions(): Flow<List<Transaction>> = transactions.asStateFlow()
+
+    override fun observeIsLoading(): Flow<Boolean> = isLoading.asStateFlow()
 
     override suspend fun addTransaction(
         type: TransactionType,

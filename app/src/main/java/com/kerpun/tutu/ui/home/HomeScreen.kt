@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -32,9 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kerpun.tutu.ui.common.BalanceCardSkeleton
+import com.kerpun.tutu.ui.common.SkeletonBlock
 import com.kerpun.tutu.ui.common.SwipeActionsTransactionRow
+import com.kerpun.tutu.ui.common.TransactionRowSkeleton
 import com.kerpun.tutu.ui.common.TransactionUi
 import com.kerpun.tutu.ui.common.TutuViewModelFactory
+import com.kerpun.tutu.ui.common.rememberShimmerBrush
 import com.kerpun.tutu.ui.theme.LocalTutuColors
 
 @Composable
@@ -46,6 +51,7 @@ fun HomeScreen(
     val state by viewModel.uiState.collectAsState()
     val colors = LocalTutuColors.current
     var openTransactionId by remember { mutableStateOf<Long?>(null) }
+    val shimmer = rememberShimmerBrush()
 
     LazyColumn(
         modifier = modifier,
@@ -76,59 +82,79 @@ fun HomeScreen(
             }
         }
 
-        item {
-            Column {
-                Text(text = "Saldo disponible", color = colors.textSecondary, fontSize = 13.sp)
-                Box(modifier = Modifier.padding(top = 6.dp)) {
-                    BalanceCard(
-                        balanceText = state.balanceText,
-                        incomeText = state.incomeText,
-                        expenseText = state.expenseText,
-                    )
+        if (state.isLoading) {
+            item { BalanceCardSkeleton(brush = shimmer) }
+            item {
+                SkeletonBlock(
+                    modifier = Modifier.fillMaxWidth(0.7f).height(34.dp),
+                    brush = shimmer,
+                    shape = RoundedCornerShape(16.dp),
+                )
+            }
+            item {
+                Text(
+                    text = "Movimientos recientes",
+                    color = colors.textPrimary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            items(4) { TransactionRowSkeleton(brush = shimmer) }
+        } else {
+            item {
+                Column {
+                    Text(text = "Saldo disponible", color = colors.textSecondary, fontSize = 13.sp)
+                    Box(modifier = Modifier.padding(top = 6.dp)) {
+                        BalanceCard(
+                            balanceText = state.balanceText,
+                            incomeText = state.incomeText,
+                            expenseText = state.expenseText,
+                        )
+                    }
                 }
             }
-        }
 
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(colors.surface)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-            ) {
-                Text(text = state.insightText, color = colors.textSecondary, fontSize = 13.sp, lineHeight = 18.sp)
-            }
-        }
-
-        item {
-            Text(
-                text = "Movimientos recientes",
-                color = colors.textPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-        }
-
-        if (state.recentTransactions.isEmpty()) {
             item {
-                Text(text = "Aún no tienes movimientos", color = colors.textTertiary, fontSize = 13.sp)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(colors.surface)
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                ) {
+                    Text(text = state.insightText, color = colors.textSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+                }
             }
-        } else {
-            items(state.recentTransactions, key = { it.id }) { transaction ->
-                SwipeActionsTransactionRow(
-                    transaction = transaction,
-                    isRevealed = openTransactionId == transaction.id,
-                    onRevealedChange = { revealed -> openTransactionId = if (revealed) transaction.id else null },
-                    onEdit = {
-                        openTransactionId = null
-                        onEditTransaction(transaction)
-                    },
-                    onDelete = {
-                        openTransactionId = null
-                        viewModel.deleteTransaction(transaction)
-                    },
+
+            item {
+                Text(
+                    text = "Movimientos recientes",
+                    color = colors.textPrimary,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
                 )
+            }
+
+            if (state.recentTransactions.isEmpty()) {
+                item {
+                    Text(text = "Aún no tienes movimientos", color = colors.textTertiary, fontSize = 13.sp)
+                }
+            } else {
+                items(state.recentTransactions, key = { it.id }) { transaction ->
+                    SwipeActionsTransactionRow(
+                        transaction = transaction,
+                        isRevealed = openTransactionId == transaction.id,
+                        onRevealedChange = { revealed -> openTransactionId = if (revealed) transaction.id else null },
+                        onEdit = {
+                            openTransactionId = null
+                            onEditTransaction(transaction)
+                        },
+                        onDelete = {
+                            openTransactionId = null
+                            viewModel.deleteTransaction(transaction)
+                        },
+                    )
+                }
             }
         }
     }

@@ -23,12 +23,15 @@ class SupabaseTransactionRepository(private val postgrest: Postgrest) : Transact
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val transactions = MutableStateFlow<List<Transaction>>(emptyList())
+    private val isLoading = MutableStateFlow(true)
 
     init {
         scope.launch { refresh() }
     }
 
     override fun observeTransactions(): Flow<List<Transaction>> = transactions.asStateFlow()
+
+    override fun observeIsLoading(): Flow<Boolean> = isLoading.asStateFlow()
 
     override suspend fun addTransaction(
         type: TransactionType,
@@ -85,5 +88,6 @@ class SupabaseTransactionRepository(private val postgrest: Postgrest) : Transact
             .select { order(column = "occurred_at", order = Order.DESCENDING) }
             .decodeList<TransactionRow>()
         transactions.value = rows.map { it.toDomain() }
+        isLoading.value = false
     }
 }

@@ -33,8 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kerpun.tutu.ui.common.SwipeActionsTransactionRow
+import com.kerpun.tutu.ui.common.TransactionRowSkeleton
 import com.kerpun.tutu.ui.common.TransactionUi
 import com.kerpun.tutu.ui.common.TutuViewModelFactory
+import com.kerpun.tutu.ui.common.rememberShimmerBrush
 import com.kerpun.tutu.ui.theme.LocalTutuColors
 import com.kerpun.tutu.ui.theme.TutuColors
 
@@ -47,6 +49,7 @@ fun MovementsScreen(
     val state by viewModel.uiState.collectAsState()
     val colors = LocalTutuColors.current
     var openTransactionId by remember { mutableStateOf<Long?>(null) }
+    val shimmer = rememberShimmerBrush()
 
     LazyColumn(
         modifier = modifier,
@@ -71,7 +74,9 @@ fun MovementsScreen(
             )
         }
 
-        if (state.transactions.isEmpty()) {
+        if (state.isLoading) {
+            items(6) { TransactionRowSkeleton(brush = shimmer) }
+        } else if (state.transactions.isEmpty()) {
             item {
                 Text(
                     text = "No hay movimientos para este filtro",

@@ -22,12 +22,15 @@ class SupabaseCategoryRepository(private val postgrest: Postgrest) : CategoryRep
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val categories = MutableStateFlow<List<Category>>(emptyList())
+    private val isLoading = MutableStateFlow(true)
 
     init {
         scope.launch { refresh() }
     }
 
     override fun observeCategories(): Flow<List<Category>> = categories.asStateFlow()
+
+    override fun observeIsLoading(): Flow<Boolean> = isLoading.asStateFlow()
 
     override suspend fun addCategory(
         name: String,
@@ -69,5 +72,6 @@ class SupabaseCategoryRepository(private val postgrest: Postgrest) : CategoryRep
             .select { order(column = "id", order = Order.ASCENDING) }
             .decodeList<CategoryRow>()
         categories.value = rows.map { it.toDomain() }
+        isLoading.value = false
     }
 }

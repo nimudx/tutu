@@ -13,8 +13,11 @@ class FakeCategoryRepository : CategoryRepository {
 
     private val nextId = AtomicLong(seedCategories.size + 1L)
     private val categories = MutableStateFlow(seedCategories)
+    private val isLoading = MutableStateFlow(false)
 
     override fun observeCategories(): Flow<List<Category>> = categories.asStateFlow()
+
+    override fun observeIsLoading(): Flow<Boolean> = isLoading.asStateFlow()
 
     override suspend fun addCategory(
         name: String,

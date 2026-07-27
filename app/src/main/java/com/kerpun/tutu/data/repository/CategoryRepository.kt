@@ -7,6 +7,9 @@ import kotlinx.coroutines.flow.Flow
 interface CategoryRepository {
     fun observeCategories(): Flow<List<Category>>
 
+    /** True until the first successful load completes; false from then on. */
+    fun observeIsLoading(): Flow<Boolean>
+
     suspend fun addCategory(name: String, type: TransactionType, color: String, icon: String?): Category
 
     suspend fun updateCategory(category: Category)

@@ -30,13 +30,20 @@ class MovementsViewModel(
         transactionRepository.observeTransactions(),
         categoryRepository.observeCategories(),
         filter,
-    ) { transactions, categories, currentFilter ->
-        val categoriesById = categories.associateBy { it.id }
-        val filtered = transactions
-            .filter { matchesFilter(it, currentFilter) }
-            .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
-            .map { it.toUi(categoriesById[it.categoryId]) }
-        MovementsUiState(filter = currentFilter, transactions = filtered, isLoading = false)
+        transactionRepository.observeIsLoading(),
+        categoryRepository.observeIsLoading(),
+    ) { transactions, categories, currentFilter, transactionsLoading, categoriesLoading ->
+        val isLoading = transactionsLoading || categoriesLoading
+        if (isLoading) {
+            MovementsUiState(filter = currentFilter, isLoading = true)
+        } else {
+            val categoriesById = categories.associateBy { it.id }
+            val filtered = transactions
+                .filter { matchesFilter(it, currentFilter) }
+                .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
+                .map { it.toUi(categoriesById[it.categoryId]) }
+            MovementsUiState(filter = currentFilter, transactions = filtered, isLoading = false)
+        }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
