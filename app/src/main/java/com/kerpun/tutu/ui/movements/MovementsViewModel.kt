@@ -1,0 +1,50 @@
+package com.kerpun.tutu.ui.movements
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.kerpun.tutu.data.model.Transaction
+import com.kerpun.tutu.data.model.TransactionType
+import com.kerpun.tutu.data.repository.CategoryRepository
+import com.kerpun.tutu.data.repository.TransactionRepository
+import com.kerpun.tutu.ui.common.toUi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+
+class MovementsViewModel(
+    private val transactionRepository: TransactionRepository,
+    private val categoryRepository: CategoryRepository,
+) : ViewModel() {
+
+    private val filter = MutableStateFlow(MovementsFilter.ALL)
+
+    val uiState: StateFlow<MovementsUiState> = combine(
+        transactionRepository.observeTransactions(),
+        categoryRepository.observeCategories(),
+        filter,
+    ) { transactions, categories, currentFilter ->
+        val categoriesById = categories.associateBy { it.id }
+        val filtered = transactions
+            .filter { matchesFilter(it, currentFilter) }
+            .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
+            .map { it.toUi(categoriesById[it.categoryId]) }
+        MovementsUiState(filter = currentFilter, transactions = filtered, isLoading = false)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5_000),
+        initialValue = MovementsUiState(),
+    )
+
+    fun setFilter(newFilter: MovementsFilter) {
+        filter.value = newFilter
+    }
+
+    private fun matchesFilter(transaction: Transaction, currentFilter: MovementsFilter): Boolean =
+        when (currentFilter) {
+            MovementsFilter.ALL -> true
+            MovementsFilter.INCOME -> transaction.type == TransactionType.INCOME
+            MovementsFilter.EXPENSE -> transaction.type == TransactionType.EXPENSE
+        }
+}
