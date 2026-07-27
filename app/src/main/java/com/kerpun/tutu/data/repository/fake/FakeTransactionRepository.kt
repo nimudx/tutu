@@ -36,6 +36,24 @@ class FakeTransactionRepository : TransactionRepository {
         return transaction
     }
 
+    override suspend fun updateTransaction(
+        id: Long,
+        type: TransactionType,
+        amount: Double,
+        categoryId: Long?,
+        description: String?,
+    ) {
+        transactions.update { list ->
+            list.map { tx ->
+                if (tx.id == id) {
+                    tx.copy(type = type, amount = amount, categoryId = categoryId, description = description)
+                } else {
+                    tx
+                }
+            }
+        }
+    }
+
     override suspend fun deleteTransaction(id: Long) {
         transactions.update { list -> list.filterNot { it.id == id } }
     }

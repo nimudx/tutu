@@ -20,7 +20,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -30,18 +32,21 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.kerpun.tutu.ui.common.TransactionRow
+import com.kerpun.tutu.ui.common.SwipeActionsTransactionRow
+import com.kerpun.tutu.ui.common.TransactionUi
 import com.kerpun.tutu.ui.common.TutuViewModelFactory
 import com.kerpun.tutu.ui.theme.LocalTutuColors
 import com.kerpun.tutu.ui.theme.TutuColors
 
 @Composable
 fun MovementsScreen(
+    onEditTransaction: (TransactionUi) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: MovementsViewModel = viewModel(factory = TutuViewModelFactory),
 ) {
     val state by viewModel.uiState.collectAsState()
     val colors = LocalTutuColors.current
+    var openTransactionId by remember { mutableStateOf<Long?>(null) }
 
     LazyColumn(
         modifier = modifier,
@@ -77,7 +82,19 @@ fun MovementsScreen(
             }
         } else {
             items(state.transactions, key = { it.id }) { transaction ->
-                TransactionRow(transaction = transaction)
+                SwipeActionsTransactionRow(
+                    transaction = transaction,
+                    isRevealed = openTransactionId == transaction.id,
+                    onRevealedChange = { revealed -> openTransactionId = if (revealed) transaction.id else null },
+                    onEdit = {
+                        openTransactionId = null
+                        onEditTransaction(transaction)
+                    },
+                    onDelete = {
+                        openTransactionId = null
+                        viewModel.deleteTransaction(transaction)
+                    },
+                )
             }
         }
     }

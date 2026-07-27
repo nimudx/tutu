@@ -16,5 +16,13 @@ interface TransactionRepository {
         occurredAt: LocalDate,
     ): Transaction
 
+    suspend fun updateTransaction(
+        id: Long,
+        type: TransactionType,
+        amount: Double,
+        categoryId: Long?,
+        description: String?,
+    )
+
     suspend fun deleteTransaction(id: Long)
 }

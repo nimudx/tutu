@@ -7,6 +7,11 @@ import kotlinx.datetime.LocalDate
 
 data class TransactionUi(
     val id: Long,
+    val type: TransactionType,
+    val amount: Double,
+    val categoryId: Long?,
+    val description: String?,
+    val occurredAt: LocalDate,
     val label: String,
     val dateLabel: String,
     val color: String,
@@ -25,6 +30,11 @@ fun Transaction.toUi(category: Category?, today: LocalDate = todayLocalDate()): 
     val sign = if (isIncome) "+ " else "- "
     return TransactionUi(
         id = id,
+        type = type,
+        amount = amount,
+        categoryId = categoryId,
+        description = description,
+        occurredAt = occurredAt,
         label = label,
         dateLabel = occurredAt.toDisplayLabel(today),
         color = category?.color ?: FALLBACK_CATEGORY_COLOR,

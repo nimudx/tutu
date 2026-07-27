@@ -20,44 +20,66 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kerpun.tutu.ui.addtransaction.AddTransactionScreen
 import com.kerpun.tutu.ui.addtransaction.AddTransactionViewModel
+import com.kerpun.tutu.ui.common.ToastBanner
 import com.kerpun.tutu.ui.common.TutuBottomBar
 import com.kerpun.tutu.ui.common.TutuTab
 import com.kerpun.tutu.ui.common.TutuViewModelFactory
-import com.kerpun.tutu.ui.common.ToastBanner
 import com.kerpun.tutu.ui.home.HomeScreen
+import com.kerpun.tutu.ui.home.HomeViewModel
 import com.kerpun.tutu.ui.movements.MovementsScreen
+import com.kerpun.tutu.ui.movements.MovementsViewModel
 import com.kerpun.tutu.ui.settings.SettingsScreen
 import com.kerpun.tutu.ui.settings.SettingsViewModel
 import com.kerpun.tutu.ui.theme.LocalTutuColors
 import com.kerpun.tutu.ui.theme.TutuTheme
 import kotlinx.coroutines.delay
 
-private const val TOAST_DURATION_MS = 2_200L
+private const val SAVE_TOAST_DURATION_MS = 2_200L
+private const val UNDO_TOAST_DURATION_MS = 4_000L
 
 @Composable
 fun TutuApp() {
+    val homeViewModel: HomeViewModel = viewModel(factory = TutuViewModelFactory)
+    val movementsViewModel: MovementsViewModel = viewModel(factory = TutuViewModelFactory)
     val settingsViewModel: SettingsViewModel = viewModel(factory = TutuViewModelFactory)
+    val addTransactionViewModel: AddTransactionViewModel = viewModel(factory = TutuViewModelFactory)
+
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
 
     TutuTheme(darkTheme = settingsState.isDarkTheme) {
         var selectedTab by remember { mutableStateOf(TutuTab.HOME) }
         var showAddSheet by remember { mutableStateOf(false) }
         var toastMessage by remember { mutableStateOf<String?>(null) }
-
-        val addTransactionViewModel: AddTransactionViewModel = viewModel(factory = TutuViewModelFactory)
+        var toastOnUndo by remember { mutableStateOf<(() -> Unit)?>(null) }
 
         LaunchedEffect(addTransactionViewModel) {
-            addTransactionViewModel.savedEvents.collect {
+            addTransactionViewModel.savedEvents.collect { message ->
                 showAddSheet = false
                 selectedTab = TutuTab.HOME
-                toastMessage = "Transacción agregada"
+                toastOnUndo = null
+                toastMessage = message
+            }
+        }
+
+        LaunchedEffect(homeViewModel) {
+            homeViewModel.toastEvents.collect { event ->
+                toastOnUndo = event.onUndo
+                toastMessage = event.message
+            }
+        }
+
+        LaunchedEffect(movementsViewModel) {
+            movementsViewModel.toastEvents.collect { event ->
+                toastOnUndo = event.onUndo
+                toastMessage = event.message
             }
         }
 
         LaunchedEffect(toastMessage) {
             if (toastMessage != null) {
-                delay(TOAST_DURATION_MS)
+                delay(if (toastOnUndo != null) UNDO_TOAST_DURATION_MS else SAVE_TOAST_DURATION_MS)
                 toastMessage = null
+                toastOnUndo = null
             }
         }
 
@@ -68,14 +90,47 @@ fun TutuApp() {
                 .background(colors.bg),
         ) {
             when (selectedTab) {
-                TutuTab.HOME -> HomeScreen(modifier = Modifier.fillMaxSize())
-                TutuTab.MOVEMENTS -> MovementsScreen(modifier = Modifier.fillMaxSize())
+                TutuTab.HOME -> HomeScreen(
+                    viewModel = homeViewModel,
+                    onEditTransaction = { transaction ->
+                        addTransactionViewModel.startEditing(
+                            id = transaction.id,
+                            type = transaction.type,
+                            amount = transaction.amount,
+                            categoryId = transaction.categoryId,
+                            description = transaction.description,
+                        )
+                        showAddSheet = true
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
+                TutuTab.MOVEMENTS -> MovementsScreen(
+                    viewModel = movementsViewModel,
+                    onEditTransaction = { transaction ->
+                        addTransactionViewModel.startEditing(
+                            id = transaction.id,
+                            type = transaction.type,
+                            amount = transaction.amount,
+                            categoryId = transaction.categoryId,
+                            description = transaction.description,
+                        )
+                        showAddSheet = true
+                    },
+                    modifier = Modifier.fillMaxSize(),
+                )
                 TutuTab.SETTINGS -> SettingsScreen(viewModel = settingsViewModel, modifier = Modifier.fillMaxSize())
             }
 
             toastMessage?.let { message ->
                 ToastBanner(
                     message = message,
+                    onUndo = toastOnUndo?.let { undo ->
+                        {
+                            undo()
+                            toastMessage = null
+                            toastOnUndo = null
+                        }
+                    },
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .padding(horizontal = 20.dp)
@@ -86,7 +141,10 @@ fun TutuApp() {
             TutuBottomBar(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
-                onAddClick = { showAddSheet = true },
+                onAddClick = {
+                    addTransactionViewModel.startCreating()
+                    showAddSheet = true
+                },
                 modifier = Modifier.align(Alignment.BottomCenter),
             )
 
@@ -98,7 +156,10 @@ fun TutuApp() {
             ) {
                 AddTransactionScreen(
                     viewModel = addTransactionViewModel,
-                    onClose = { showAddSheet = false },
+                    onClose = {
+                        addTransactionViewModel.startCreating()
+                        showAddSheet = false
+                    },
                 )
             }
         }

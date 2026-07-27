@@ -67,7 +67,12 @@ fun AddTransactionScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(text = "Nueva transacción", color = colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = if (state.isEditing) "Editar transacción" else "Nueva transacción",
+                color = colors.textPrimary,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+            )
             CloseButton(onClick = onClose, colors = colors)
         }
 
@@ -141,9 +146,9 @@ fun AddTransactionScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 22.dp)
+                .alpha(if (state.canSave) 1f else 0.5f)
                 .clip(RoundedCornerShape(16.dp))
                 .background(colors.accent)
-                .alpha(if (state.canSave) 1f else 0.5f)
                 .clickable(
                     enabled = state.canSave,
                     interactionSource = remember { MutableInteractionSource() },
@@ -153,7 +158,12 @@ fun AddTransactionScreen(
                 .padding(vertical = 16.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = "Guardar", color = Color(0xFF04122E), fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = if (state.isEditing) "Guardar cambios" else "Guardar",
+                color = Color(0xFF04122E),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }

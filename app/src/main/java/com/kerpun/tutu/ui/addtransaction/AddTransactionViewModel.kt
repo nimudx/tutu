@@ -6,6 +6,7 @@ import com.kerpun.tutu.data.model.TransactionType
 import com.kerpun.tutu.data.repository.CategoryRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
 import com.kerpun.tutu.ui.common.todayLocalDate
+import kotlin.math.roundToLong
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,16 +28,18 @@ class AddTransactionViewModel(
     private val categoryRepository: CategoryRepository,
 ) : ViewModel() {
 
+    private val editingId = MutableStateFlow<Long?>(null)
     private val type = MutableStateFlow(TransactionType.EXPENSE)
     private val amountInput = MutableStateFlow("")
     private val selectedCategoryId = MutableStateFlow<Long?>(null)
     private val description = MutableStateFlow("")
     private val isSaving = MutableStateFlow(false)
 
-    private val savedEventsFlow = MutableSharedFlow<Unit>()
-    val savedEvents: SharedFlow<Unit> = savedEventsFlow.asSharedFlow()
+    private val savedEventsFlow = MutableSharedFlow<String>()
+    val savedEvents: SharedFlow<String> = savedEventsFlow.asSharedFlow()
 
     private data class FormInputs(
+        val editingId: Long?,
         val type: TransactionType,
         val amountInput: String,
         val selectedCategoryId: Long?,
@@ -44,10 +47,23 @@ class AddTransactionViewModel(
         val isSaving: Boolean,
     )
 
+    private data class EditingAndType(val editingId: Long?, val type: TransactionType)
+    private data class AmountAndCategory(val amountInput: String, val selectedCategoryId: Long?)
+
     private val formInputs: Flow<FormInputs> = combine(
-        type, amountInput, selectedCategoryId, description, isSaving,
-    ) { currentType, currentAmount, currentCategoryId, currentDescription, currentIsSaving ->
-        FormInputs(currentType, currentAmount, currentCategoryId, currentDescription, currentIsSaving)
+        combine(editingId, type, ::EditingAndType),
+        combine(amountInput, selectedCategoryId, ::AmountAndCategory),
+        description,
+        isSaving,
+    ) { editingAndType, amountAndCategory, currentDescription, currentIsSaving ->
+        FormInputs(
+            editingId = editingAndType.editingId,
+            type = editingAndType.type,
+            amountInput = amountAndCategory.amountInput,
+            selectedCategoryId = amountAndCategory.selectedCategoryId,
+            description = currentDescription,
+            isSaving = currentIsSaving,
+        )
     }
 
     val uiState: StateFlow<AddTransactionUiState> = combine(
@@ -67,12 +83,35 @@ class AddTransactionViewModel(
             description = inputs.description,
             canSave = inputs.amountInput.toDoubleOrNull()?.let { it > 0.0 } == true && !inputs.isSaving,
             isSaving = inputs.isSaving,
+            editingId = inputs.editingId,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = AddTransactionUiState(),
     )
+
+    fun startCreating() {
+        editingId.value = null
+        type.value = TransactionType.EXPENSE
+        amountInput.value = ""
+        selectedCategoryId.value = null
+        description.value = ""
+    }
+
+    fun startEditing(
+        id: Long,
+        type: TransactionType,
+        amount: Double,
+        categoryId: Long?,
+        description: String?,
+    ) {
+        editingId.value = id
+        this.type.value = type
+        amountInput.value = amount.toAmountInput()
+        selectedCategoryId.value = categoryId
+        this.description.value = description ?: ""
+    }
 
     fun setType(newType: TransactionType) {
         type.value = newType
@@ -105,17 +144,38 @@ class AddTransactionViewModel(
 
         isSaving.value = true
         viewModelScope.launch {
-            transactionRepository.addTransaction(
-                type = current.type,
-                amount = amount,
-                categoryId = current.selectedCategoryId,
-                description = current.description.trim().ifBlank { null },
-                occurredAt = todayLocalDate(),
-            )
+            val editId = current.editingId
+            if (editId != null) {
+                transactionRepository.updateTransaction(
+                    id = editId,
+                    type = current.type,
+                    amount = amount,
+                    categoryId = current.selectedCategoryId,
+                    description = current.description.trim().ifBlank { null },
+                )
+            } else {
+                transactionRepository.addTransaction(
+                    type = current.type,
+                    amount = amount,
+                    categoryId = current.selectedCategoryId,
+                    description = current.description.trim().ifBlank { null },
+                    occurredAt = todayLocalDate(),
+                )
+            }
+            editingId.value = null
             amountInput.value = ""
             description.value = ""
             isSaving.value = false
-            savedEventsFlow.emit(Unit)
+            savedEventsFlow.emit(if (editId != null) "Cambios guardados" else "Transacción agregada")
         }
+    }
+}
+
+private fun Double.toAmountInput(): String {
+    val rounded = (this * 100).roundToLong() / 100.0
+    return if (rounded == rounded.toLong().toDouble()) {
+        rounded.toLong().toString()
+    } else {
+        rounded.toString()
     }
 }
