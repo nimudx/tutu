@@ -66,6 +66,7 @@ dependencies {
     implementation(platform(libs.supabase.bom))
     implementation(libs.supabase.postgrest)
     implementation(libs.ktor.client.android)
+    implementation(libs.androidx.core.splashscreen)
     add("kotlinCompilerClasspath", "org.jetbrains.kotlin:kotlin-compiler-embeddable:${libs.versions.kotlin.get()}")
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

@@ -1,6 +1,7 @@
 package com.kerpun.tutu.ui
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -30,12 +31,14 @@ import com.kerpun.tutu.ui.movements.MovementsScreen
 import com.kerpun.tutu.ui.movements.MovementsViewModel
 import com.kerpun.tutu.ui.settings.SettingsScreen
 import com.kerpun.tutu.ui.settings.SettingsViewModel
+import com.kerpun.tutu.ui.splash.SplashOverlay
 import com.kerpun.tutu.ui.theme.LocalTutuColors
 import com.kerpun.tutu.ui.theme.TutuTheme
 import kotlinx.coroutines.delay
 
 private const val SAVE_TOAST_DURATION_MS = 2_200L
 private const val UNDO_TOAST_DURATION_MS = 4_000L
+private const val SPLASH_DURATION_MS = 1_600L
 
 @Composable
 fun TutuApp() {
@@ -51,6 +54,12 @@ fun TutuApp() {
         var showAddSheet by remember { mutableStateOf(false) }
         var toastMessage by remember { mutableStateOf<String?>(null) }
         var toastOnUndo by remember { mutableStateOf<(() -> Unit)?>(null) }
+        var splashVisible by remember { mutableStateOf(true) }
+
+        LaunchedEffect(Unit) {
+            delay(SPLASH_DURATION_MS)
+            splashVisible = false
+        }
 
         LaunchedEffect(addTransactionViewModel) {
             addTransactionViewModel.savedEvents.collect { message ->
@@ -161,6 +170,14 @@ fun TutuApp() {
                         showAddSheet = false
                     },
                 )
+            }
+
+            AnimatedVisibility(
+                visible = splashVisible,
+                exit = fadeOut(),
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                SplashOverlay()
             }
         }
     }
