@@ -6,6 +6,7 @@ enum class MovementsFilter {
     ALL,
     INCOME,
     EXPENSE,
+    VAULT,
 }
 
 data class MovementsUiState(

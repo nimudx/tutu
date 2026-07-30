@@ -12,6 +12,7 @@ data class AddTransactionUiState(
     val canSave: Boolean = false,
     val isSaving: Boolean = false,
     val editingId: Long? = null,
+    val contextText: String = "",
 ) {
     val isEditing: Boolean get() = editingId != null
 }

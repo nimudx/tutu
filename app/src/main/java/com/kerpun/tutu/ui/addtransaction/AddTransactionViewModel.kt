@@ -3,8 +3,11 @@ package com.kerpun.tutu.ui.addtransaction
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kerpun.tutu.data.model.TransactionType
+import com.kerpun.tutu.data.model.VAULT_WITHDRAWAL_CATEGORY_NAME
+import com.kerpun.tutu.data.model.toBalanceSummary
 import com.kerpun.tutu.data.repository.CategoryRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
+import com.kerpun.tutu.ui.common.formatAmount
 import com.kerpun.tutu.ui.common.todayLocalDate
 import kotlin.math.roundToLong
 import kotlinx.coroutines.flow.Flow
@@ -69,11 +72,20 @@ class AddTransactionViewModel(
     val uiState: StateFlow<AddTransactionUiState> = combine(
         formInputs,
         categoryRepository.observeCategories(),
-    ) { inputs, allCategories ->
+        transactionRepository.observeTransactions(),
+    ) { inputs, allCategories, transactions ->
         val categoriesForType = allCategories.filter { it.type == inputs.type }
         val resolvedSelectedId = inputs.selectedCategoryId
             ?.takeIf { id -> categoriesForType.any { it.id == id } }
             ?: categoriesForType.firstOrNull()?.id
+
+        val summary = transactions.toBalanceSummary(allCategories.associateBy { it.id })
+        val selectedCategoryName = allCategories.find { it.id == resolvedSelectedId }?.name
+        val contextText = if (inputs.type == TransactionType.VAULT && selectedCategoryName == VAULT_WITHDRAWAL_CATEGORY_NAME) {
+            "En Vault: ${formatAmount(summary.vaultBalance)}"
+        } else {
+            "Disponible: ${formatAmount(summary.availableBalance)}"
+        }
 
         AddTransactionUiState(
             type = inputs.type,
@@ -84,6 +96,7 @@ class AddTransactionViewModel(
             canSave = inputs.amountInput.toDoubleOrNull()?.let { it > 0.0 } == true && !inputs.isSaving,
             isSaving = inputs.isSaving,
             editingId = inputs.editingId,
+            contextText = contextText,
         )
     }.stateIn(
         scope = viewModelScope,

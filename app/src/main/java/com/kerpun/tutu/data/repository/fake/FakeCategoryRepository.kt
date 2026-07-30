@@ -57,6 +57,8 @@ class FakeCategoryRepository : CategoryRepository {
             Category(8, "Freelance", TransactionType.INCOME, "#3EC7CF", "💻", isDefault = true),
             Category(9, "Ventas", TransactionType.INCOME, "#C7CF3E", "🛍️", isDefault = true),
             Category(10, "Otros", TransactionType.INCOME, "#8A8F98", "💰", isDefault = true),
+            Category(11, "Agregar", TransactionType.VAULT, "#4E8CFF", "🔒", isDefault = true),
+            Category(12, "Retirar", TransactionType.VAULT, "#4E8CFF", "🔓", isDefault = true),
         )
     }
 }

@@ -84,5 +84,6 @@ class MovementsViewModel(
             MovementsFilter.ALL -> true
             MovementsFilter.INCOME -> transaction.type == TransactionType.INCOME
             MovementsFilter.EXPENSE -> transaction.type == TransactionType.EXPENSE
+            MovementsFilter.VAULT -> transaction.type == TransactionType.VAULT
         }
 }

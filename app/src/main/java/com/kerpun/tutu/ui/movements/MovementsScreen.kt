@@ -143,6 +143,14 @@ private fun FilterSegmentedControl(
             unselectedText = colors.textSecondary,
             onClick = { onFilterSelected(MovementsFilter.EXPENSE) },
         )
+        SegmentedOption(
+            label = "Vault",
+            selected = filter == MovementsFilter.VAULT,
+            selectedBg = colors.accent,
+            selectedText = colors.bg,
+            unselectedText = colors.textSecondary,
+            onClick = { onFilterSelected(MovementsFilter.VAULT) },
+        )
     }
 }
 

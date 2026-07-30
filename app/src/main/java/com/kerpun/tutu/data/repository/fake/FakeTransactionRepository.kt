@@ -63,7 +63,8 @@ class FakeTransactionRepository : TransactionRepository {
 
     companion object {
         // categoryId según FakeCategoryRepository: 1 Comida, 2 Transporte, 3 Hogar, 4 Salud,
-        // 5 Ocio, 6 Otros(gasto), 7 Salario, 8 Freelance, 9 Ventas, 10 Otros(ingreso)
+        // 5 Ocio, 6 Otros(gasto), 7 Salario, 8 Freelance, 9 Ventas, 10 Otros(ingreso),
+        // 11 Agregar(vault), 12 Retirar(vault)
         private val seedTransactions = listOf(
             Transaction(1, TransactionType.INCOME, 2800.0, 7, "Pago mensual", LocalDate(2026, 7, 24)),
             Transaction(2, TransactionType.INCOME, 450.0, 8, "Proyecto de diseño", LocalDate(2026, 7, 22)),
@@ -73,6 +74,7 @@ class FakeTransactionRepository : TransactionRepository {
             Transaction(6, TransactionType.EXPENSE, 120.0, 3, "Luz y agua", LocalDate(2026, 7, 20)),
             Transaction(7, TransactionType.EXPENSE, 60.0, 5, "Cine", LocalDate(2026, 7, 19)),
             Transaction(8, TransactionType.EXPENSE, 45.0, 4, "Farmacia", LocalDate(2026, 7, 18)),
+            Transaction(9, TransactionType.VAULT, 200.0, 11, "Ahorro mensual", LocalDate(2026, 7, 21)),
         )
     }
 }

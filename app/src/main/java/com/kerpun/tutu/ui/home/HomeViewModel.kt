@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kerpun.tutu.data.model.Category
 import com.kerpun.tutu.data.model.Transaction
 import com.kerpun.tutu.data.model.TransactionType
+import com.kerpun.tutu.data.model.toBalanceSummary
 import com.kerpun.tutu.data.repository.CategoryRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
 import com.kerpun.tutu.ui.common.TransactionToastEvent
@@ -79,8 +80,7 @@ class HomeViewModel(
         if (isLoading) return HomeUiState(isLoading = true)
 
         val categoriesById = categories.associateBy { it.id }
-        val income = transactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amount }
-        val expense = transactions.filter { it.type == TransactionType.EXPENSE }.sumOf { it.amount }
+        val summary = transactions.toBalanceSummary(categoriesById)
 
         val recent = transactions
             .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
@@ -88,9 +88,10 @@ class HomeViewModel(
             .map { it.toUi(categoriesById[it.categoryId]) }
 
         return HomeUiState(
-            balanceText = formatAmount(income - expense),
-            incomeText = formatAmount(income),
-            expenseText = formatAmount(expense),
+            balanceText = formatAmount(summary.availableBalance),
+            incomeText = formatAmount(summary.income),
+            expenseText = formatAmount(summary.expense),
+            vaultText = formatAmount(summary.vaultBalance),
             insightText = buildWeeklyInsight(transactions),
             recentTransactions = recent,
             isLoading = false,

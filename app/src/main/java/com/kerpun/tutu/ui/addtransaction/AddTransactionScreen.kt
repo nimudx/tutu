@@ -82,15 +82,17 @@ fun AddTransactionScreen(
             colors = colors,
         )
 
-        Box(
+        Column(
             modifier = Modifier.fillMaxWidth().padding(vertical = 22.dp),
-            contentAlignment = Alignment.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Text(text = state.contextText, color = colors.textSecondary, fontSize = 13.sp)
             Text(
                 text = "S/ ${state.amountInput.ifEmpty { "0" }}",
                 color = colors.textPrimary,
                 fontSize = 44.sp,
                 fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 4.dp),
             )
         }
 
@@ -209,6 +211,13 @@ private fun TypeToggle(type: TransactionType, onTypeSelected: (TransactionType) 
             selectedColor = colors.expenseStrong,
             textColor = colors.textSecondary,
             onClick = { onTypeSelected(TransactionType.EXPENSE) },
+        )
+        TypeOption(
+            label = "Vault",
+            selected = type == TransactionType.VAULT,
+            selectedColor = colors.accent,
+            textColor = colors.textSecondary,
+            onClick = { onTypeSelected(TransactionType.VAULT) },
         )
     }
 }

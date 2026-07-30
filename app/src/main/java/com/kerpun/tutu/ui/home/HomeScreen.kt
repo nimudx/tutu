@@ -111,6 +111,7 @@ fun HomeScreen(
                             balanceText = state.balanceText,
                             incomeText = state.incomeText,
                             expenseText = state.expenseText,
+                            vaultText = state.vaultText,
                         )
                     }
                 }
@@ -163,7 +164,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun BalanceCard(balanceText: String, incomeText: String, expenseText: String) {
+private fun BalanceCard(balanceText: String, incomeText: String, expenseText: String, vaultText: String) {
     val colors = LocalTutuColors.current
     Column(
         modifier = Modifier
@@ -186,6 +187,10 @@ private fun BalanceCard(balanceText: String, incomeText: String, expenseText: St
             Column {
                 Text(text = "Egresos", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
                 Text(text = expenseText, color = colors.expense, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
+            Column {
+                Text(text = "Vault", color = Color.White.copy(alpha = 0.55f), fontSize = 12.sp)
+                Text(text = vaultText, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
     }
