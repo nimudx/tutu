@@ -39,6 +39,9 @@ import com.kerpun.tutu.ui.theme.TutuColors
 
 @Composable
 fun SettingsScreen(
+    onSignOut: () -> Unit,
+    onOpenSpaces: () -> Unit,
+    onOpenMembers: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = TutuViewModelFactory),
 ) {
@@ -60,10 +63,24 @@ fun SettingsScreen(
         }
 
         item {
+            SettingsGroup(title = "Espacio", colors = colors) {
+                SettingsRow(label = state.spaceName.ifEmpty { "Sin espacio" }, onClick = onOpenSpaces) {
+                    Text("Cambiar", color = colors.textTertiary, fontSize = 13.sp)
+                }
+                SettingsDivider(colors)
+                SettingsRow(label = "Miembros", onClick = onOpenMembers) {
+                    Text("Ver", color = colors.textTertiary, fontSize = 13.sp)
+                }
+            }
+        }
+
+        item {
             SettingsGroup(title = "Cuenta", colors = colors) {
                 SettingsRow(label = "Perfil") { Text("Editar", color = colors.textTertiary, fontSize = 13.sp) }
                 SettingsDivider(colors)
                 SettingsRow(label = "Moneda") { Text(state.currencyLabel, color = colors.textTertiary, fontSize = 13.sp) }
+                SettingsDivider(colors)
+                SettingsRow(label = "Cerrar sesión", onClick = onSignOut, destructive = true) {}
             }
         }
 
@@ -124,15 +141,36 @@ private fun SettingsGroup(title: String, colors: TutuColors, content: @Composabl
 }
 
 @Composable
-private fun SettingsRow(label: String, trailing: @Composable () -> Unit) {
+private fun SettingsRow(
+    label: String,
+    onClick: (() -> Unit)? = null,
+    destructive: Boolean = false,
+    trailing: @Composable () -> Unit,
+) {
     val colors = LocalTutuColors.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .let { base ->
+                if (onClick != null) {
+                    base.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = onClick,
+                    )
+                } else {
+                    base
+                }
+            }
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, color = colors.textPrimary, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(
+            text = label,
+            color = if (destructive) colors.expense else colors.textPrimary,
+            fontSize = 14.sp,
+            modifier = Modifier.weight(1f),
+        )
         trailing()
     }
 }

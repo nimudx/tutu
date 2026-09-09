@@ -14,6 +14,7 @@ data class TransactionRow(
     @SerialName("category_id") val categoryId: Long? = null,
     val description: String? = null,
     @SerialName("occurred_at") val occurredAt: LocalDate,
+    @SerialName("space_id") val spaceId: String? = null,
 ) {
     fun toDomain() = Transaction(
         id = id,
@@ -32,6 +33,8 @@ data class TransactionInsert(
     @SerialName("category_id") val categoryId: Long?,
     val description: String?,
     @SerialName("occurred_at") val occurredAt: LocalDate,
+    @SerialName("space_id") val spaceId: String,
+    @SerialName("created_by") val createdBy: String,
 )
 
 @Serializable

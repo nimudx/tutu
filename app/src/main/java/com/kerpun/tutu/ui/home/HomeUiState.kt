@@ -1,5 +1,6 @@
 package com.kerpun.tutu.ui.home
 
+import com.kerpun.tutu.ui.common.MemberAvatarUi
 import com.kerpun.tutu.ui.common.TransactionUi
 
 data class HomeUiState(
@@ -10,4 +11,7 @@ data class HomeUiState(
     val insightText: String = "",
     val recentTransactions: List<TransactionUi> = emptyList(),
     val isLoading: Boolean = true,
+    val spaceName: String = "",
+    val spaceColor: String = "#4E8CFF",
+    val memberAvatars: List<MemberAvatarUi> = emptyList(),
 )

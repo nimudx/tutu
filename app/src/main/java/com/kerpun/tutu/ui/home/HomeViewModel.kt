@@ -3,18 +3,23 @@ package com.kerpun.tutu.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kerpun.tutu.data.model.Category
+import com.kerpun.tutu.data.model.Space
 import com.kerpun.tutu.data.model.Transaction
 import com.kerpun.tutu.data.model.TransactionType
 import com.kerpun.tutu.data.model.toBalanceSummary
 import com.kerpun.tutu.data.repository.CategoryRepository
+import com.kerpun.tutu.data.repository.SpaceRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
+import com.kerpun.tutu.ui.common.MemberAvatarUi
 import com.kerpun.tutu.ui.common.TransactionToastEvent
 import com.kerpun.tutu.ui.common.TransactionUi
 import com.kerpun.tutu.ui.common.formatAmount
 import com.kerpun.tutu.ui.common.todayLocalDate
+import com.kerpun.tutu.ui.common.toAvatarUi
 import com.kerpun.tutu.ui.common.toUi
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -32,15 +37,45 @@ private const val WEEK_LENGTH_DAYS = 7
 class HomeViewModel(
     private val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
+    private val spaceRepository: SpaceRepository,
+    activeSpaceId: StateFlow<String?>,
 ) : ViewModel() {
 
-    val uiState: StateFlow<HomeUiState> = combine(
+    private val activeSpace = combine(spaceRepository.observeSpaces(), activeSpaceId) { spaces, id ->
+        spaces.find { it.id == id }
+    }
+
+    private val transactionsAndCategories = combine(
         transactionRepository.observeTransactions(),
         categoryRepository.observeCategories(),
+    ) { transactions, categories -> transactions to categories }
+
+    private val isDataLoading = combine(
         transactionRepository.observeIsLoading(),
         categoryRepository.observeIsLoading(),
-    ) { transactions, categories, transactionsLoading, categoriesLoading ->
-        buildUiState(transactions, categories, transactionsLoading || categoriesLoading)
+    ) { transactionsLoading, categoriesLoading -> transactionsLoading || categoriesLoading }
+
+    private val memberAvatars = MutableStateFlow<List<MemberAvatarUi>>(emptyList())
+
+    init {
+        viewModelScope.launch {
+            activeSpaceId.collect { spaceId ->
+                memberAvatars.value = emptyList()
+                if (spaceId != null) {
+                    runCatching { spaceRepository.listMembers(spaceId) }
+                        .onSuccess { members -> memberAvatars.value = members.map { it.toAvatarUi() } }
+                }
+            }
+        }
+    }
+
+    val uiState: StateFlow<HomeUiState> = combine(
+        transactionsAndCategories,
+        isDataLoading,
+        activeSpace,
+        memberAvatars,
+    ) { (transactions, categories), isLoading, space, avatars ->
+        buildUiState(transactions, categories, isLoading, space, avatars)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -76,8 +111,10 @@ class HomeViewModel(
         transactions: List<Transaction>,
         categories: List<Category>,
         isLoading: Boolean,
+        space: Space?,
+        avatars: List<MemberAvatarUi>,
     ): HomeUiState {
-        if (isLoading) return HomeUiState(isLoading = true)
+        if (isLoading) return HomeUiState(spaceName = space?.name ?: "", spaceColor = space?.color ?: "#4E8CFF", memberAvatars = avatars, isLoading = true)
 
         val categoriesById = categories.associateBy { it.id }
         val summary = transactions.toBalanceSummary(categoriesById)
@@ -95,6 +132,9 @@ class HomeViewModel(
             insightText = buildWeeklyInsight(transactions),
             recentTransactions = recent,
             isLoading = false,
+            spaceName = space?.name ?: "",
+            spaceColor = space?.color ?: "#4E8CFF",
+            memberAvatars = avatars,
         )
     }
 
