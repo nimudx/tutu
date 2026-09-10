@@ -19,6 +19,7 @@ data class TransactionUi(
     val initial: String,
     val amountText: String,
     val amountColor: String,
+    val authorLabel: String?,
 )
 
 private const val INCOME_AMOUNT_COLOR = "#3ECF7A"
@@ -26,7 +27,7 @@ private const val EXPENSE_AMOUNT_COLOR = "#FF6B6B"
 private const val VAULT_AMOUNT_COLOR = "#4E8CFF"
 private const val FALLBACK_CATEGORY_COLOR = "#8A8F98"
 
-fun Transaction.toUi(category: Category?, today: LocalDate = todayLocalDate()): TransactionUi {
+fun Transaction.toUi(category: Category?, today: LocalDate = todayLocalDate(), authorLabel: String? = null): TransactionUi {
     val label = description?.takeIf { it.isNotBlank() } ?: category?.name ?: "Otros"
     val (sign, amountColor) = when (type) {
         TransactionType.INCOME -> "+ " to INCOME_AMOUNT_COLOR
@@ -49,5 +50,6 @@ fun Transaction.toUi(category: Category?, today: LocalDate = todayLocalDate()): 
         initial = label.take(1).uppercase(),
         amountText = sign + formatAmount(amount),
         amountColor = amountColor,
+        authorLabel = authorLabel,
     )
 }

@@ -15,6 +15,7 @@ data class TransactionRow(
     val description: String? = null,
     @SerialName("occurred_at") val occurredAt: LocalDate,
     @SerialName("space_id") val spaceId: String? = null,
+    @SerialName("created_by") val createdBy: String? = null,
 ) {
     fun toDomain() = Transaction(
         id = id,
@@ -23,6 +24,7 @@ data class TransactionRow(
         categoryId = categoryId,
         description = description,
         occurredAt = occurredAt,
+        createdBy = createdBy,
     )
 }
 

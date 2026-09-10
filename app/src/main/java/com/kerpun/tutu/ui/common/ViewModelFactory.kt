@@ -12,8 +12,8 @@ import com.kerpun.tutu.ui.settings.SettingsViewModel
 import com.kerpun.tutu.ui.spaces.SpacesViewModel
 
 val TutuViewModelFactory = viewModelFactory {
-    initializer { HomeViewModel(AppContainer.transactionRepository, AppContainer.categoryRepository, AppContainer.spaceRepository, AppContainer.activeSpaceId) }
-    initializer { MovementsViewModel(AppContainer.transactionRepository, AppContainer.categoryRepository) }
+    initializer { HomeViewModel(AppContainer.transactionRepository, AppContainer.categoryRepository, AppContainer.spaceRepository, AppContainer.authRepository, AppContainer.activeSpaceId) }
+    initializer { MovementsViewModel(AppContainer.transactionRepository, AppContainer.categoryRepository, AppContainer.spaceRepository, AppContainer.authRepository, AppContainer.activeSpaceId) }
     initializer { AddTransactionViewModel(AppContainer.transactionRepository, AppContainer.categoryRepository) }
     initializer { SettingsViewModel(AppContainer.categoryRepository, AppContainer.spaceRepository, AppContainer.activeSpaceId) }
     initializer { AuthViewModel(AppContainer.authRepository) }

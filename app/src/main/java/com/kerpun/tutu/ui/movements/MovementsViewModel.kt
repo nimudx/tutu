@@ -2,12 +2,17 @@ package com.kerpun.tutu.ui.movements
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kerpun.tutu.data.model.AuthState
+import com.kerpun.tutu.data.model.SpaceMember
 import com.kerpun.tutu.data.model.Transaction
 import com.kerpun.tutu.data.model.TransactionType
+import com.kerpun.tutu.data.repository.AuthRepository
 import com.kerpun.tutu.data.repository.CategoryRepository
+import com.kerpun.tutu.data.repository.SpaceRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
 import com.kerpun.tutu.ui.common.TransactionToastEvent
 import com.kerpun.tutu.ui.common.TransactionUi
+import com.kerpun.tutu.ui.common.authorLabelFor
 import com.kerpun.tutu.ui.common.toUi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,24 +21,54 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MovementsViewModel(
     private val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
+    private val spaceRepository: SpaceRepository,
+    private val authRepository: AuthRepository,
+    activeSpaceId: StateFlow<String?>,
 ) : ViewModel() {
 
     private val filter = MutableStateFlow(MovementsFilter.ALL)
 
-    val uiState: StateFlow<MovementsUiState> = combine(
+    private val spaceMembers = MutableStateFlow<List<SpaceMember>>(emptyList())
+    private val currentUserId = authRepository.observeAuthState()
+        .map { (it as? AuthState.SignedIn)?.userId }
+
+    init {
+        viewModelScope.launch {
+            activeSpaceId.collect { spaceId ->
+                spaceMembers.value = emptyList()
+                if (spaceId != null) {
+                    runCatching { spaceRepository.listMembers(spaceId) }
+                        .onSuccess { members -> spaceMembers.value = members }
+                }
+            }
+        }
+    }
+
+    private val transactionsAndCategories = combine(
         transactionRepository.observeTransactions(),
         categoryRepository.observeCategories(),
-        filter,
+    ) { transactions, categories -> transactions to categories }
+
+    private val isDataLoading = combine(
         transactionRepository.observeIsLoading(),
         categoryRepository.observeIsLoading(),
-    ) { transactions, categories, currentFilter, transactionsLoading, categoriesLoading ->
-        val isLoading = transactionsLoading || categoriesLoading
+    ) { transactionsLoading, categoriesLoading -> transactionsLoading || categoriesLoading }
+
+    private val membersAndUser = combine(spaceMembers, currentUserId) { members, userId -> members to userId }
+
+    val uiState: StateFlow<MovementsUiState> = combine(
+        transactionsAndCategories,
+        filter,
+        isDataLoading,
+        membersAndUser,
+    ) { (transactions, categories), currentFilter, isLoading, (members, userId) ->
         if (isLoading) {
             MovementsUiState(filter = currentFilter, isLoading = true)
         } else {
@@ -41,7 +76,7 @@ class MovementsViewModel(
             val filtered = transactions
                 .filter { matchesFilter(it, currentFilter) }
                 .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
-                .map { it.toUi(categoriesById[it.categoryId]) }
+                .map { it.toUi(categoriesById[it.categoryId], authorLabel = authorLabelFor(it.createdBy, members, userId)) }
             MovementsUiState(filter = currentFilter, transactions = filtered, isLoading = false)
         }
     }.stateIn(

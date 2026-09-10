@@ -148,7 +148,7 @@ private fun TransactionRowContent(transaction: TransactionUi, modifier: Modifier
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = transaction.dateLabel,
+                text = transaction.authorLabel?.let { "${transaction.dateLabel} · $it" } ?: transaction.dateLabel,
                 color = colors.textTertiary,
                 fontSize = 12.sp,
             )

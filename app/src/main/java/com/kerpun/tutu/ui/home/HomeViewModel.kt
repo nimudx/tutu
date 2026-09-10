@@ -2,17 +2,20 @@ package com.kerpun.tutu.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kerpun.tutu.data.model.AuthState
 import com.kerpun.tutu.data.model.Category
 import com.kerpun.tutu.data.model.Space
+import com.kerpun.tutu.data.model.SpaceMember
 import com.kerpun.tutu.data.model.Transaction
 import com.kerpun.tutu.data.model.TransactionType
 import com.kerpun.tutu.data.model.toBalanceSummary
+import com.kerpun.tutu.data.repository.AuthRepository
 import com.kerpun.tutu.data.repository.CategoryRepository
 import com.kerpun.tutu.data.repository.SpaceRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
-import com.kerpun.tutu.ui.common.MemberAvatarUi
 import com.kerpun.tutu.ui.common.TransactionToastEvent
 import com.kerpun.tutu.ui.common.TransactionUi
+import com.kerpun.tutu.ui.common.authorLabelFor
 import com.kerpun.tutu.ui.common.formatAmount
 import com.kerpun.tutu.ui.common.todayLocalDate
 import com.kerpun.tutu.ui.common.toAvatarUi
@@ -25,6 +28,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.datetime.DateTimeUnit
@@ -38,6 +42,7 @@ class HomeViewModel(
     private val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
     private val spaceRepository: SpaceRepository,
+    private val authRepository: AuthRepository,
     activeSpaceId: StateFlow<String?>,
 ) : ViewModel() {
 
@@ -55,15 +60,17 @@ class HomeViewModel(
         categoryRepository.observeIsLoading(),
     ) { transactionsLoading, categoriesLoading -> transactionsLoading || categoriesLoading }
 
-    private val memberAvatars = MutableStateFlow<List<MemberAvatarUi>>(emptyList())
+    private val spaceMembers = MutableStateFlow<List<SpaceMember>>(emptyList())
+    private val currentUserId = authRepository.observeAuthState()
+        .map { (it as? AuthState.SignedIn)?.userId }
 
     init {
         viewModelScope.launch {
             activeSpaceId.collect { spaceId ->
-                memberAvatars.value = emptyList()
+                spaceMembers.value = emptyList()
                 if (spaceId != null) {
                     runCatching { spaceRepository.listMembers(spaceId) }
-                        .onSuccess { members -> memberAvatars.value = members.map { it.toAvatarUi() } }
+                        .onSuccess { members -> spaceMembers.value = members }
                 }
             }
         }
@@ -73,9 +80,10 @@ class HomeViewModel(
         transactionsAndCategories,
         isDataLoading,
         activeSpace,
-        memberAvatars,
-    ) { (transactions, categories), isLoading, space, avatars ->
-        buildUiState(transactions, categories, isLoading, space, avatars)
+        spaceMembers,
+        currentUserId,
+    ) { (transactions, categories), isLoading, space, members, userId ->
+        buildUiState(transactions, categories, isLoading, space, members, userId)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -112,8 +120,10 @@ class HomeViewModel(
         categories: List<Category>,
         isLoading: Boolean,
         space: Space?,
-        avatars: List<MemberAvatarUi>,
+        members: List<SpaceMember>,
+        userId: String?,
     ): HomeUiState {
+        val avatars = members.map { it.toAvatarUi() }
         if (isLoading) return HomeUiState(spaceName = space?.name ?: "", spaceColor = space?.color ?: "#4E8CFF", memberAvatars = avatars, isLoading = true)
 
         val categoriesById = categories.associateBy { it.id }
@@ -122,7 +132,7 @@ class HomeViewModel(
         val recent = transactions
             .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
             .take(RECENT_TRANSACTIONS_LIMIT)
-            .map { it.toUi(categoriesById[it.categoryId]) }
+            .map { it.toUi(categoriesById[it.categoryId], authorLabel = authorLabelFor(it.createdBy, members, userId)) }
 
         return HomeUiState(
             balanceText = formatAmount(summary.availableBalance),

@@ -9,4 +9,5 @@ data class Transaction(
     val categoryId: Long?,
     val description: String?,
     val occurredAt: LocalDate,
+    val createdBy: String? = null,
 )
