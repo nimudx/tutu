@@ -1,14 +1,19 @@
 package com.kerpun.tutu.data.repository.supabase
 
 import com.kerpun.tutu.data.model.Transaction
+import com.kerpun.tutu.data.model.TransactionStatus
 import com.kerpun.tutu.data.model.TransactionType
+import com.kerpun.tutu.data.remote.dto.RequiresApprovalRow
+import com.kerpun.tutu.data.remote.dto.ReviewTransactionsParams
 import com.kerpun.tutu.data.remote.dto.TransactionInsert
 import com.kerpun.tutu.data.remote.dto.TransactionRow
 import com.kerpun.tutu.data.remote.dto.TransactionUpdate
 import com.kerpun.tutu.data.repository.TransactionRepository
 import io.github.jan.supabase.auth.Auth
 import io.github.jan.supabase.postgrest.Postgrest
+import io.github.jan.supabase.postgrest.query.Columns
 import io.github.jan.supabase.postgrest.query.Order
+import io.github.jan.supabase.postgrest.rpc
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDate
 
 private const val TABLE = "transactions"
+private const val SPACE_MEMBERS_TABLE = "space_members"
 
 class SupabaseTransactionRepository(
     private val postgrest: Postgrest,
@@ -48,6 +54,7 @@ class SupabaseTransactionRepository(
     ): Transaction {
         val spaceId = activeSpaceId.value ?: error("No hay un espacio activo")
         val userId = auth.currentUserOrNull()?.id ?: error("No hay sesión activa")
+        val status = if (isGated(spaceId, userId)) TransactionStatus.PENDING else TransactionStatus.APPROVED
         val row = postgrest.from(TABLE)
             .insert(
                 TransactionInsert(
@@ -58,6 +65,7 @@ class SupabaseTransactionRepository(
                     occurredAt = occurredAt,
                     spaceId = spaceId,
                     createdBy = userId,
+                    status = status.toDb(),
                 ),
             ) {
                 select()
@@ -65,6 +73,19 @@ class SupabaseTransactionRepository(
             .decodeSingle<TransactionRow>()
         refresh()
         return row.toDomain()
+    }
+
+    override suspend fun isGated(spaceId: String, userId: String): Boolean {
+        return postgrest.from(SPACE_MEMBERS_TABLE)
+            .select(columns = Columns.list("requires_approval")) {
+                filter {
+                    eq("space_id", spaceId)
+                    eq("user_id", userId)
+                }
+            }
+            .decodeSingleOrNull<RequiresApprovalRow>()
+            ?.requiresApproval
+            ?: false
     }
 
     override suspend fun updateTransaction(
@@ -90,6 +111,12 @@ class SupabaseTransactionRepository(
 
     override suspend fun deleteTransaction(id: Long) {
         postgrest.from(TABLE).delete { filter { eq("id", id) } }
+        refresh()
+    }
+
+    override suspend fun reviewTransactions(ids: List<Long>, approve: Boolean) {
+        val status = if (approve) TransactionStatus.APPROVED else TransactionStatus.REJECTED
+        postgrest.rpc("review_transactions", ReviewTransactionsParams(ids = ids, status = status.toDb()))
         refresh()
     }
 

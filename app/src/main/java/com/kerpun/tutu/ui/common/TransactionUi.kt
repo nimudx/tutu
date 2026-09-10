@@ -2,6 +2,7 @@ package com.kerpun.tutu.ui.common
 
 import com.kerpun.tutu.data.model.Category
 import com.kerpun.tutu.data.model.Transaction
+import com.kerpun.tutu.data.model.TransactionStatus
 import com.kerpun.tutu.data.model.TransactionType
 import com.kerpun.tutu.data.model.VAULT_WITHDRAWAL_CATEGORY_NAME
 import kotlinx.datetime.LocalDate
@@ -20,6 +21,7 @@ data class TransactionUi(
     val amountText: String,
     val amountColor: String,
     val authorLabel: String?,
+    val status: TransactionStatus,
 )
 
 private const val INCOME_AMOUNT_COLOR = "#3ECF7A"
@@ -51,5 +53,6 @@ fun Transaction.toUi(category: Category?, today: LocalDate = todayLocalDate(), a
         amountText = sign + formatAmount(amount),
         amountColor = amountColor,
         authorLabel = authorLabel,
+        status = status,
     )
 }

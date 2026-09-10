@@ -1,6 +1,5 @@
 package com.kerpun.tutu.ui.home
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -31,16 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kerpun.tutu.ui.common.AvatarStack
 import com.kerpun.tutu.ui.common.BalanceCardSkeleton
+import com.kerpun.tutu.ui.common.ChevronDownIcon
 import com.kerpun.tutu.ui.common.SkeletonBlock
 import com.kerpun.tutu.ui.common.SwipeActionsTransactionRow
 import com.kerpun.tutu.ui.common.TransactionRowSkeleton
@@ -55,6 +50,7 @@ fun HomeScreen(
     onEditTransaction: (TransactionUi) -> Unit,
     onOpenSpaces: () -> Unit,
     onOpenMembers: () -> Unit,
+    onOpenApprovals: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(factory = TutuViewModelFactory),
 ) {
@@ -168,15 +164,13 @@ fun HomeScreen(
                 }
             }
 
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(colors.surface)
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                ) {
-                    Text(text = state.insightText, color = colors.textSecondary, fontSize = 13.sp, lineHeight = 18.sp)
+            if (state.summaryCards.isNotEmpty()) {
+                item {
+                    SummaryCarousel(
+                        cards = state.summaryCards,
+                        onCardClick = { card -> if (card.key == "pending") onOpenApprovals() },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
             }
 
@@ -215,23 +209,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun ChevronDownIcon(color: Color, modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier.size(11.dp)) {
-        val path = Path().apply {
-            moveTo(size.width * 0.25f, size.height * 0.40625f)
-            lineTo(size.width * 0.5f, size.height * 0.65625f)
-            lineTo(size.width * 0.75f, size.height * 0.40625f)
-        }
-        drawPath(
-            path = path,
-            color = color,
-            style = Stroke(width = 1.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
-    }
-}
-
-@Composable
-private fun BalanceCard(balanceText: String, incomeText: String, expenseText: String, vaultText: String) {
+private fun BalanceCard(
+    balanceText: String,
+    incomeText: String,
+    expenseText: String,
+    vaultText: String,
+) {
     val colors = LocalTutuColors.current
     Column(
         modifier = Modifier

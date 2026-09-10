@@ -140,18 +140,29 @@ fun SpacesScreen(
 
         if (state.spaces.isNotEmpty()) {
             item { Spacer(modifier = Modifier.height(18.dp)) }
-            items(state.spaces, key = { it.id }) { space ->
-                SpaceRow(
-                    space = space,
-                    isActive = space.id == state.activeSpaceId,
-                    avatars = state.memberAvatarsBySpaceId[space.id] ?: emptyList(),
-                    onClick = {
-                        viewModel.selectSpace(space.id)
-                        onClose?.invoke()
-                    },
-                    colors = colors,
-                )
-                Spacer(modifier = Modifier.height(10.dp))
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(colors.surface),
+                ) {
+                    state.spaces.forEachIndexed { index, space ->
+                        if (index > 0) {
+                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border))
+                        }
+                        SpaceRow(
+                            space = space,
+                            isActive = space.id == state.activeSpaceId,
+                            avatars = state.memberAvatarsBySpaceId[space.id] ?: emptyList(),
+                            onClick = {
+                                viewModel.selectSpace(space.id)
+                                onClose?.invoke()
+                            },
+                            colors = colors,
+                        )
+                    }
+                }
             }
         }
 
@@ -242,8 +253,6 @@ private fun SpaceRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(colors.surface)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

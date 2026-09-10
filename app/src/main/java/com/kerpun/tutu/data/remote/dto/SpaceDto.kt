@@ -31,12 +31,19 @@ data class SpaceMemberInsert(
     val role: String,
 )
 
+/** Just the gate flag, for the single-row lookup before inserting a transaction. */
+@Serializable
+data class RequiresApprovalRow(
+    @SerialName("requires_approval") val requiresApproval: Boolean,
+)
+
 /** Row returned by the `list_space_members` RPC (includes the member's email). */
 @Serializable
 data class SpaceMemberDetailRow(
     @SerialName("user_id") val userId: String,
     val email: String,
     val role: String,
+    @SerialName("requires_approval") val requiresApproval: Boolean = false,
 )
 
 @Serializable
@@ -62,4 +69,11 @@ data class SetMemberRoleParams(
 data class RemoveMemberParams(
     @SerialName("p_space_id") val spaceId: String,
     @SerialName("p_user_id") val userId: String,
+)
+
+@Serializable
+data class SetRequiresApprovalParams(
+    @SerialName("p_space_id") val spaceId: String,
+    @SerialName("p_user_id") val userId: String,
+    @SerialName("p_value") val value: Boolean,
 )

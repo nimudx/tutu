@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +35,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kerpun.tutu.data.model.TransactionStatus
 import com.kerpun.tutu.ui.theme.LocalTutuColors
 import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
@@ -147,11 +149,27 @@ private fun TransactionRowContent(transaction: TransactionUi, modifier: Modifier
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(
-                text = transaction.authorLabel?.let { "${transaction.dateLabel} · $it" } ?: transaction.dateLabel,
-                color = colors.textTertiary,
-                fontSize = 12.sp,
-            )
+            val statusDotColor = when (transaction.status) {
+                TransactionStatus.PENDING -> colors.pending
+                TransactionStatus.REJECTED -> colors.expense
+                TransactionStatus.APPROVED -> null
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (statusDotColor != null) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(statusDotColor),
+                    )
+                    Box(modifier = Modifier.width(5.dp))
+                }
+                Text(
+                    text = transaction.authorLabel?.let { "${transaction.dateLabel} · $it" } ?: transaction.dateLabel,
+                    color = colors.textTertiary,
+                    fontSize = 12.sp,
+                )
+            }
         }
         Text(
             text = transaction.amountText,

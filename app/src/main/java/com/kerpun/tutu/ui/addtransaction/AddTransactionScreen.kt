@@ -144,6 +144,16 @@ fun AddTransactionScreen(
 
         Keypad(onKeyPress = viewModel::pressKey, colors = colors)
 
+        state.approvalHint?.let { hint ->
+            Text(
+                text = hint,
+                color = colors.textTertiary,
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
+                modifier = Modifier.padding(top = 18.dp),
+            )
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()

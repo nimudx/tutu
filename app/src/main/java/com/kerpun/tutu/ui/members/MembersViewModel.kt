@@ -100,6 +100,15 @@ class MembersViewModel(
         }
     }
 
+    fun setRequiresApproval(userId: String, value: Boolean) {
+        val spaceId = currentSpaceId ?: return
+        viewModelScope.launch {
+            runCatching { spaceRepository.setRequiresApproval(spaceId, userId, value) }
+                .onSuccess { refresh(spaceId) }
+                .onFailure { error -> members.update { it.copy(errorMessage = error.message) } }
+        }
+    }
+
     /** Leaving the active space clears it, so the app routes back to space selection. */
     fun leaveSpace() {
         val spaceId = currentSpaceId ?: return

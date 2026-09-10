@@ -23,4 +23,5 @@ data class SpaceMember(
     val userId: String,
     val email: String,
     val role: SpaceRole,
+    val requiresApproval: Boolean = false,
 )

@@ -23,6 +23,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kerpun.tutu.data.model.AuthState
 import com.kerpun.tutu.ui.addtransaction.AddTransactionScreen
 import com.kerpun.tutu.ui.addtransaction.AddTransactionViewModel
+import com.kerpun.tutu.ui.approvals.ApprovalsScreen
 import com.kerpun.tutu.ui.auth.AuthViewModel
 import com.kerpun.tutu.ui.auth.LoginScreen
 import com.kerpun.tutu.ui.common.ToastBanner
@@ -59,12 +60,14 @@ fun TutuApp() {
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
     val sessionState by authViewModel.sessionState.collectAsStateWithLifecycle()
     val spacesState by spacesViewModel.uiState.collectAsStateWithLifecycle()
+    val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
     TutuTheme(darkTheme = settingsState.isDarkTheme) {
         var selectedTab by remember { mutableStateOf(TutuTab.HOME) }
         var showAddSheet by remember { mutableStateOf(false) }
         var showSpacesSheet by remember { mutableStateOf(false) }
         var showMembersSheet by remember { mutableStateOf(false) }
+        var showApprovalsSheet by remember { mutableStateOf(false) }
         var toastMessage by remember { mutableStateOf<String?>(null) }
         var toastOnUndo by remember { mutableStateOf<(() -> Unit)?>(null) }
         var splashVisible by remember { mutableStateOf(true) }
@@ -80,6 +83,7 @@ fun TutuApp() {
                 showAddSheet = false
                 showSpacesSheet = false
                 showMembersSheet = false
+                showApprovalsSheet = false
             }
         }
 
@@ -88,6 +92,7 @@ fun TutuApp() {
                 showAddSheet = false
                 showSpacesSheet = false
                 showMembersSheet = false
+                showApprovalsSheet = false
             }
         }
 
@@ -154,6 +159,7 @@ fun TutuApp() {
                                 },
                                 onOpenSpaces = { showSpacesSheet = true },
                                 onOpenMembers = { showMembersSheet = true },
+                                onOpenApprovals = { showApprovalsSheet = true },
                                 modifier = Modifier.fillMaxSize(),
                             )
                             TutuTab.MOVEMENTS -> MovementsScreen(
@@ -175,6 +181,7 @@ fun TutuApp() {
                                 onSignOut = authViewModel::signOut,
                                 onOpenSpaces = { showSpacesSheet = true },
                                 onOpenMembers = { showMembersSheet = true },
+                                onOpenApprovals = { showApprovalsSheet = true },
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
@@ -203,6 +210,8 @@ fun TutuApp() {
                                 addTransactionViewModel.startCreating()
                                 showAddSheet = true
                             },
+                            pendingApprovalsCount = homeState.pendingBadgeCount,
+                            onPendingApprovalsClick = { showApprovalsSheet = true },
                             modifier = Modifier.align(Alignment.BottomCenter),
                         )
 
@@ -247,6 +256,18 @@ fun TutuApp() {
                         ) {
                             MembersScreen(
                                 onClose = { showMembersSheet = false },
+                            )
+                        }
+
+                        BackHandler(enabled = showApprovalsSheet) { showApprovalsSheet = false }
+                        AnimatedVisibility(
+                            visible = showApprovalsSheet,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it }),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            ApprovalsScreen(
+                                onClose = { showApprovalsSheet = false },
                             )
                         }
                     }

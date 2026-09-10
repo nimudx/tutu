@@ -20,4 +20,6 @@ interface SpaceRepository {
     suspend fun setMemberRole(spaceId: String, userId: String, role: SpaceRole)
 
     suspend fun removeMember(spaceId: String, userId: String)
+
+    suspend fun setRequiresApproval(spaceId: String, userId: String, value: Boolean)
 }

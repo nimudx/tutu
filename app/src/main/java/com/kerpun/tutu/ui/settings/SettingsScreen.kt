@@ -42,6 +42,7 @@ fun SettingsScreen(
     onSignOut: () -> Unit,
     onOpenSpaces: () -> Unit,
     onOpenMembers: () -> Unit,
+    onOpenApprovals: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = TutuViewModelFactory),
 ) {
@@ -70,6 +71,14 @@ fun SettingsScreen(
                 SettingsDivider(colors)
                 SettingsRow(label = "Miembros", onClick = onOpenMembers) {
                     Text("Ver", color = colors.textTertiary, fontSize = 13.sp)
+                }
+                SettingsDivider(colors)
+                SettingsRow(label = "Aprobaciones", onClick = onOpenApprovals) {
+                    Text(
+                        state.approvalsHint,
+                        color = if (state.approvalsNeedsAttention) colors.pending else colors.textTertiary,
+                        fontSize = 13.sp,
+                    )
                 }
             }
         }

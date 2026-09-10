@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kerpun.tutu.data.model.AuthState
 import com.kerpun.tutu.data.model.SpaceMember
+import com.kerpun.tutu.data.model.SpaceRole
 import com.kerpun.tutu.data.model.Transaction
+import com.kerpun.tutu.data.model.TransactionStatus
 import com.kerpun.tutu.data.model.TransactionType
 import com.kerpun.tutu.data.repository.AuthRepository
 import com.kerpun.tutu.data.repository.CategoryRepository
@@ -73,7 +75,9 @@ class MovementsViewModel(
             MovementsUiState(filter = currentFilter, isLoading = true)
         } else {
             val categoriesById = categories.associateBy { it.id }
+            val isAdmin = members.find { it.userId == userId }?.role == SpaceRole.ADMIN
             val filtered = transactions
+                .filter { it.status == TransactionStatus.APPROVED || isAdmin || it.createdBy == userId }
                 .filter { matchesFilter(it, currentFilter) }
                 .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
                 .map { it.toUi(categoriesById[it.categoryId], authorLabel = authorLabelFor(it.createdBy, members, userId)) }

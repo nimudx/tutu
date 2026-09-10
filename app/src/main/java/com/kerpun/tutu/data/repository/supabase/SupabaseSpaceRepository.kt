@@ -7,6 +7,7 @@ import com.kerpun.tutu.data.remote.dto.InviteMemberParams
 import com.kerpun.tutu.data.remote.dto.ListMembersParams
 import com.kerpun.tutu.data.remote.dto.RemoveMemberParams
 import com.kerpun.tutu.data.remote.dto.SetMemberRoleParams
+import com.kerpun.tutu.data.remote.dto.SetRequiresApprovalParams
 import com.kerpun.tutu.data.remote.dto.SpaceInsert
 import com.kerpun.tutu.data.remote.dto.SpaceMemberDetailRow
 import com.kerpun.tutu.data.remote.dto.SpaceMemberInsert
@@ -115,7 +116,14 @@ class SupabaseSpaceRepository(
     override suspend fun listMembers(spaceId: String): List<SpaceMember> {
         return postgrest.rpc("list_space_members", ListMembersParams(spaceId = spaceId))
             .decodeList<SpaceMemberDetailRow>()
-            .map { SpaceMember(userId = it.userId, email = it.email, role = SpaceRole.fromDb(it.role)) }
+            .map {
+                SpaceMember(
+                    userId = it.userId,
+                    email = it.email,
+                    role = SpaceRole.fromDb(it.role),
+                    requiresApproval = it.requiresApproval,
+                )
+            }
     }
 
     override suspend fun inviteMember(spaceId: String, email: String, role: SpaceRole) {
@@ -128,6 +136,10 @@ class SupabaseSpaceRepository(
 
     override suspend fun removeMember(spaceId: String, userId: String) {
         postgrest.rpc("remove_member", RemoveMemberParams(spaceId = spaceId, userId = userId))
+    }
+
+    override suspend fun setRequiresApproval(spaceId: String, userId: String, value: Boolean) {
+        postgrest.rpc("set_requires_approval", SetRequiresApprovalParams(spaceId = spaceId, userId = userId, value = value))
     }
 
     private fun requireUserId(): String = auth.currentUserOrNull()?.id
