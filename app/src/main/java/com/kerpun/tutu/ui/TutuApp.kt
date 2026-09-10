@@ -1,5 +1,6 @@
 package com.kerpun.tutu.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -205,6 +206,10 @@ fun TutuApp() {
                             modifier = Modifier.align(Alignment.BottomCenter),
                         )
 
+                        BackHandler(enabled = showAddSheet) {
+                            addTransactionViewModel.startCreating()
+                            showAddSheet = false
+                        }
                         AnimatedVisibility(
                             visible = showAddSheet,
                             enter = slideInVertically(initialOffsetY = { it }),
@@ -220,6 +225,7 @@ fun TutuApp() {
                             )
                         }
 
+                        BackHandler(enabled = showSpacesSheet) { showSpacesSheet = false }
                         AnimatedVisibility(
                             visible = showSpacesSheet,
                             enter = slideInVertically(initialOffsetY = { it }),
@@ -232,6 +238,7 @@ fun TutuApp() {
                             )
                         }
 
+                        BackHandler(enabled = showMembersSheet) { showMembersSheet = false }
                         AnimatedVisibility(
                             visible = showMembersSheet,
                             enter = slideInVertically(initialOffsetY = { it }),

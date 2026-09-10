@@ -2,9 +2,9 @@ package com.kerpun.tutu.ui.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
@@ -37,10 +37,10 @@ fun AvatarStack(
     val visible = avatars.take(maxVisible)
     val remaining = avatars.size - visible.size
 
-    Row(modifier = modifier) {
-        visible.forEachIndexed { index, avatar ->
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy((-7).dp)) {
+        visible.forEach { avatar ->
             AvatarBubble(
-                modifier = Modifier.offset(x = (-7 * index).dp),
+                modifier = Modifier,
                 size = size,
                 background = avatar.color.toComposeColor(),
                 borderColor = borderColor,
@@ -50,7 +50,7 @@ fun AvatarStack(
         }
         if (remaining > 0) {
             AvatarBubble(
-                modifier = Modifier.offset(x = (-7 * visible.size).dp),
+                modifier = Modifier,
                 size = size,
                 background = colors.surface2,
                 borderColor = borderColor,
