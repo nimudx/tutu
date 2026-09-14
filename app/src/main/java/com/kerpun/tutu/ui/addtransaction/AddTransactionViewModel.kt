@@ -2,9 +2,11 @@ package com.kerpun.tutu.ui.addtransaction
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.kerpun.tutu.data.model.AuthState
 import com.kerpun.tutu.data.model.TransactionType
 import com.kerpun.tutu.data.model.VAULT_WITHDRAWAL_CATEGORY_NAME
 import com.kerpun.tutu.data.model.toBalanceSummary
+import com.kerpun.tutu.data.repository.AuthRepository
 import com.kerpun.tutu.data.repository.CategoryRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
 import com.kerpun.tutu.ui.common.formatAmount
@@ -25,10 +27,13 @@ import kotlinx.coroutines.launch
 private const val MAX_AMOUNT_DIGITS = 7
 private const val BACKSPACE_KEY = "⌫"
 private const val DECIMAL_KEY = "."
+private const val APPROVAL_HINT = "Se enviará al admin y no afectará el saldo hasta que lo apruebe."
 
 class AddTransactionViewModel(
     private val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
+    private val authRepository: AuthRepository,
+    private val activeSpaceId: StateFlow<String?>,
 ) : ViewModel() {
 
     private val editingId = MutableStateFlow<Long?>(null)
@@ -37,6 +42,21 @@ class AddTransactionViewModel(
     private val selectedCategoryId = MutableStateFlow<Long?>(null)
     private val description = MutableStateFlow("")
     private val isSaving = MutableStateFlow(false)
+    private val isGated = MutableStateFlow(false)
+
+    init {
+        viewModelScope.launch {
+            combine(activeSpaceId, authRepository.observeAuthState()) { spaceId, session ->
+                spaceId to (session as? AuthState.SignedIn)?.userId
+            }.collect { (spaceId, userId) ->
+                isGated.value = if (spaceId != null && userId != null) {
+                    runCatching { transactionRepository.isGated(spaceId, userId) }.getOrDefault(false)
+                } else {
+                    false
+                }
+            }
+        }
+    }
 
     private val savedEventsFlow = MutableSharedFlow<String>()
     val savedEvents: SharedFlow<String> = savedEventsFlow.asSharedFlow()
@@ -73,7 +93,8 @@ class AddTransactionViewModel(
         formInputs,
         categoryRepository.observeCategories(),
         transactionRepository.observeTransactions(),
-    ) { inputs, allCategories, transactions ->
+        isGated,
+    ) { inputs, allCategories, transactions, gated ->
         val categoriesForType = allCategories.filter { it.type == inputs.type }
         val resolvedSelectedId = inputs.selectedCategoryId
             ?.takeIf { id -> categoriesForType.any { it.id == id } }
@@ -97,6 +118,7 @@ class AddTransactionViewModel(
             isSaving = inputs.isSaving,
             editingId = inputs.editingId,
             contextText = contextText,
+            approvalHint = if (gated) APPROVAL_HINT else null,
         )
     }.stateIn(
         scope = viewModelScope,

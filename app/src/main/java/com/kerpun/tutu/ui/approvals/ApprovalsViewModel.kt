@@ -1,15 +1,16 @@
-package com.kerpun.tutu.ui.settings
+package com.kerpun.tutu.ui.approvals
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kerpun.tutu.data.model.AuthState
 import com.kerpun.tutu.data.model.SpaceMember
 import com.kerpun.tutu.data.model.SpaceRole
+import com.kerpun.tutu.data.model.toBalanceSummary
 import com.kerpun.tutu.data.repository.AuthRepository
 import com.kerpun.tutu.data.repository.CategoryRepository
 import com.kerpun.tutu.data.repository.SpaceRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
-import com.kerpun.tutu.ui.approvals.toApprovalBatches
+import com.kerpun.tutu.ui.common.formatAmount
 import com.kerpun.tutu.ui.common.todayLocalDate
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,24 +20,20 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class SettingsViewModel(
+class ApprovalsViewModel(
+    private val transactionRepository: TransactionRepository,
     private val categoryRepository: CategoryRepository,
     private val spaceRepository: SpaceRepository,
-    private val transactionRepository: TransactionRepository,
-    private val authRepository: AuthRepository,
+    authRepository: AuthRepository,
     activeSpaceId: StateFlow<String?>,
 ) : ViewModel() {
-
-    private val isDarkTheme = MutableStateFlow(true)
-    private val notificationsEnabled = MutableStateFlow(true)
-
-    private val activeSpace = combine(spaceRepository.observeSpaces(), activeSpaceId) { spaces, id ->
-        spaces.find { it.id == id }
-    }
 
     private val spaceMembers = MutableStateFlow<List<SpaceMember>>(emptyList())
     private val currentUserId = authRepository.observeAuthState()
         .map { (it as? AuthState.SignedIn)?.userId }
+    private val activeSpace = combine(spaceRepository.observeSpaces(), activeSpaceId) { spaces, id ->
+        spaces.find { it.id == id }
+    }
 
     init {
         viewModelScope.launch {
@@ -50,7 +47,7 @@ class SettingsViewModel(
         }
     }
 
-    private val approvalsState = combine(
+    val uiState: StateFlow<ApprovalsUiState> = combine(
         transactionRepository.observeTransactions(),
         categoryRepository.observeCategories(),
         spaceMembers,
@@ -58,45 +55,38 @@ class SettingsViewModel(
         activeSpace,
     ) { transactions, categories, members, userId, space ->
         val isAdmin = space?.role == SpaceRole.ADMIN
-        val gatedCount = members.count { it.requiresApproval }
         val categoriesById = categories.associateBy { it.id }
-        val pendingCount = transactions
-            .toApprovalBatches(categoriesById, members, userId, isAdmin, todayLocalDate())
-            .count { it.isPending }
-        val hint = when {
-            gatedCount == 0 -> "Nadie las necesita"
-            isAdmin -> if (pendingCount > 0) "$pendingCount por revisar" else "Al día"
-            else -> "Las revisa el admin"
-        }
-        hint to (isAdmin && pendingCount > 0)
-    }
+        val batches = transactions.toApprovalBatches(categoriesById, members, userId, isAdmin, todayLocalDate())
+        val pendingCount = batches.count { it.isPending }
+        val pendingTotal = transactions.toBalanceSummary(categoriesById).pending
 
-    val uiState: StateFlow<SettingsUiState> = combine(
-        isDarkTheme,
-        notificationsEnabled,
-        categoryRepository.observeCategories(),
-        activeSpace,
-        approvalsState,
-    ) { dark, notifications, categories, space, (approvalsHint, needsAttention) ->
-        SettingsUiState(
-            isDarkTheme = dark,
-            categoryCount = categories.size,
-            notificationsEnabled = notifications,
+        ApprovalsUiState(
             spaceName = space?.name ?: "",
-            approvalsHint = approvalsHint,
-            approvalsNeedsAttention = needsAttention,
+            spaceColor = space?.color ?: "#4E8CFF",
+            subtitle = if (pendingCount == 0) {
+                "nada pendiente"
+            } else {
+                "$pendingCount ${if (pendingCount == 1) "lote" else "lotes"} · ${formatAmount(pendingTotal)}"
+            },
+            batches = batches,
+            emptyText = if (batches.isEmpty()) {
+                if (isAdmin) "No hay nada por aprobar" else "No tienes movimientos pendientes"
+            } else {
+                null
+            },
+            isLoading = false,
         )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
-        initialValue = SettingsUiState(),
+        initialValue = ApprovalsUiState(),
     )
 
-    fun setDarkTheme(enabled: Boolean) {
-        isDarkTheme.value = enabled
+    fun approve(batch: ApprovalBatch) {
+        viewModelScope.launch { transactionRepository.reviewTransactions(batch.ids, approve = true) }
     }
 
-    fun setNotificationsEnabled(enabled: Boolean) {
-        notificationsEnabled.value = enabled
+    fun reject(batch: ApprovalBatch) {
+        viewModelScope.launch { transactionRepository.reviewTransactions(batch.ids, approve = false) }
     }
 }

@@ -28,4 +28,10 @@ interface TransactionRepository {
     )
 
     suspend fun deleteTransaction(id: Long)
+
+    /** Batch-approves or rejects pending transactions. Server-side checks the caller is an admin. */
+    suspend fun reviewTransactions(ids: List<Long>, approve: Boolean)
+
+    /** Whether [userId] currently needs an admin's approval for what they create in [spaceId]. */
+    suspend fun isGated(spaceId: String, userId: String): Boolean
 }

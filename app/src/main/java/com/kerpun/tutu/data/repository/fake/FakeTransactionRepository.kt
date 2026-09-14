@@ -1,6 +1,7 @@
 package com.kerpun.tutu.data.repository.fake
 
 import com.kerpun.tutu.data.model.Transaction
+import com.kerpun.tutu.data.model.TransactionStatus
 import com.kerpun.tutu.data.model.TransactionType
 import com.kerpun.tutu.data.repository.TransactionRepository
 import java.util.concurrent.atomic.AtomicLong
@@ -60,6 +61,13 @@ class FakeTransactionRepository : TransactionRepository {
     override suspend fun deleteTransaction(id: Long) {
         transactions.update { list -> list.filterNot { it.id == id } }
     }
+
+    override suspend fun reviewTransactions(ids: List<Long>, approve: Boolean) {
+        val status = if (approve) TransactionStatus.APPROVED else TransactionStatus.REJECTED
+        transactions.update { list -> list.map { if (it.id in ids) it.copy(status = status) else it } }
+    }
+
+    override suspend fun isGated(spaceId: String, userId: String): Boolean = false
 
     companion object {
         // categoryId según FakeCategoryRepository: 1 Comida, 2 Transporte, 3 Hogar, 4 Salud,

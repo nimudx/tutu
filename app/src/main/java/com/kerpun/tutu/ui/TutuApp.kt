@@ -1,5 +1,6 @@
 package com.kerpun.tutu.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -19,18 +20,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.kerpun.tutu.data.model.AuthState
 import com.kerpun.tutu.ui.addtransaction.AddTransactionScreen
 import com.kerpun.tutu.ui.addtransaction.AddTransactionViewModel
+import com.kerpun.tutu.ui.approvals.ApprovalsScreen
+import com.kerpun.tutu.ui.auth.AuthViewModel
+import com.kerpun.tutu.ui.auth.LoginScreen
 import com.kerpun.tutu.ui.common.ToastBanner
 import com.kerpun.tutu.ui.common.TutuBottomBar
 import com.kerpun.tutu.ui.common.TutuTab
 import com.kerpun.tutu.ui.common.TutuViewModelFactory
 import com.kerpun.tutu.ui.home.HomeScreen
 import com.kerpun.tutu.ui.home.HomeViewModel
+import com.kerpun.tutu.ui.members.MembersScreen
 import com.kerpun.tutu.ui.movements.MovementsScreen
 import com.kerpun.tutu.ui.movements.MovementsViewModel
 import com.kerpun.tutu.ui.settings.SettingsScreen
 import com.kerpun.tutu.ui.settings.SettingsViewModel
+import com.kerpun.tutu.ui.spaces.SpacesScreen
+import com.kerpun.tutu.ui.spaces.SpacesViewModel
 import com.kerpun.tutu.ui.splash.SplashOverlay
 import com.kerpun.tutu.ui.theme.LocalTutuColors
 import com.kerpun.tutu.ui.theme.TutuTheme
@@ -42,16 +50,24 @@ private const val SPLASH_DURATION_MS = 1_600L
 
 @Composable
 fun TutuApp() {
+    val authViewModel: AuthViewModel = viewModel(factory = TutuViewModelFactory)
     val homeViewModel: HomeViewModel = viewModel(factory = TutuViewModelFactory)
     val movementsViewModel: MovementsViewModel = viewModel(factory = TutuViewModelFactory)
     val settingsViewModel: SettingsViewModel = viewModel(factory = TutuViewModelFactory)
     val addTransactionViewModel: AddTransactionViewModel = viewModel(factory = TutuViewModelFactory)
+    val spacesViewModel: SpacesViewModel = viewModel(factory = TutuViewModelFactory)
 
     val settingsState by settingsViewModel.uiState.collectAsStateWithLifecycle()
+    val sessionState by authViewModel.sessionState.collectAsStateWithLifecycle()
+    val spacesState by spacesViewModel.uiState.collectAsStateWithLifecycle()
+    val homeState by homeViewModel.uiState.collectAsStateWithLifecycle()
 
     TutuTheme(darkTheme = settingsState.isDarkTheme) {
         var selectedTab by remember { mutableStateOf(TutuTab.HOME) }
         var showAddSheet by remember { mutableStateOf(false) }
+        var showSpacesSheet by remember { mutableStateOf(false) }
+        var showMembersSheet by remember { mutableStateOf(false) }
+        var showApprovalsSheet by remember { mutableStateOf(false) }
         var toastMessage by remember { mutableStateOf<String?>(null) }
         var toastOnUndo by remember { mutableStateOf<(() -> Unit)?>(null) }
         var splashVisible by remember { mutableStateOf(true) }
@@ -59,6 +75,25 @@ fun TutuApp() {
         LaunchedEffect(Unit) {
             delay(SPLASH_DURATION_MS)
             splashVisible = false
+        }
+
+        LaunchedEffect(sessionState) {
+            if (sessionState is AuthState.SignedOut) {
+                selectedTab = TutuTab.HOME
+                showAddSheet = false
+                showSpacesSheet = false
+                showMembersSheet = false
+                showApprovalsSheet = false
+            }
+        }
+
+        LaunchedEffect(spacesState.activeSpaceId) {
+            if (spacesState.activeSpaceId == null) {
+                showAddSheet = false
+                showSpacesSheet = false
+                showMembersSheet = false
+                showApprovalsSheet = false
+            }
         }
 
         LaunchedEffect(addTransactionViewModel) {
@@ -98,78 +133,150 @@ fun TutuApp() {
                 .fillMaxSize()
                 .background(colors.bg),
         ) {
-            when (selectedTab) {
-                TutuTab.HOME -> HomeScreen(
-                    viewModel = homeViewModel,
-                    onEditTransaction = { transaction ->
-                        addTransactionViewModel.startEditing(
-                            id = transaction.id,
-                            type = transaction.type,
-                            amount = transaction.amount,
-                            categoryId = transaction.categoryId,
-                            description = transaction.description,
-                        )
-                        showAddSheet = true
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                TutuTab.MOVEMENTS -> MovementsScreen(
-                    viewModel = movementsViewModel,
-                    onEditTransaction = { transaction ->
-                        addTransactionViewModel.startEditing(
-                            id = transaction.id,
-                            type = transaction.type,
-                            amount = transaction.amount,
-                            categoryId = transaction.categoryId,
-                            description = transaction.description,
-                        )
-                        showAddSheet = true
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                )
-                TutuTab.SETTINGS -> SettingsScreen(viewModel = settingsViewModel, modifier = Modifier.fillMaxSize())
-            }
-
-            toastMessage?.let { message ->
-                ToastBanner(
-                    message = message,
-                    onUndo = toastOnUndo?.let { undo ->
-                        {
-                            undo()
-                            toastMessage = null
-                            toastOnUndo = null
+            when (sessionState) {
+                is AuthState.SignedIn -> when {
+                    spacesState.isLoading -> Unit
+                    spacesState.activeSpaceId == null -> SpacesScreen(
+                        viewModel = spacesViewModel,
+                        onClose = null,
+                        signedInEmail = (sessionState as? AuthState.SignedIn)?.email,
+                        onSignOut = authViewModel::signOut,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    else -> {
+                        when (selectedTab) {
+                            TutuTab.HOME -> HomeScreen(
+                                viewModel = homeViewModel,
+                                onEditTransaction = { transaction ->
+                                    addTransactionViewModel.startEditing(
+                                        id = transaction.id,
+                                        type = transaction.type,
+                                        amount = transaction.amount,
+                                        categoryId = transaction.categoryId,
+                                        description = transaction.description,
+                                    )
+                                    showAddSheet = true
+                                },
+                                onOpenSpaces = { showSpacesSheet = true },
+                                onOpenMembers = { showMembersSheet = true },
+                                onOpenApprovals = { showApprovalsSheet = true },
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            TutuTab.MOVEMENTS -> MovementsScreen(
+                                viewModel = movementsViewModel,
+                                onEditTransaction = { transaction ->
+                                    addTransactionViewModel.startEditing(
+                                        id = transaction.id,
+                                        type = transaction.type,
+                                        amount = transaction.amount,
+                                        categoryId = transaction.categoryId,
+                                        description = transaction.description,
+                                    )
+                                    showAddSheet = true
+                                },
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                            TutuTab.SETTINGS -> SettingsScreen(
+                                viewModel = settingsViewModel,
+                                onSignOut = authViewModel::signOut,
+                                onOpenSpaces = { showSpacesSheet = true },
+                                onOpenMembers = { showMembersSheet = true },
+                                onOpenApprovals = { showApprovalsSheet = true },
+                                modifier = Modifier.fillMaxSize(),
+                            )
                         }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 110.dp),
-                )
-            }
 
-            TutuBottomBar(
-                selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it },
-                onAddClick = {
-                    addTransactionViewModel.startCreating()
-                    showAddSheet = true
-                },
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
+                        toastMessage?.let { message ->
+                            ToastBanner(
+                                message = message,
+                                onUndo = toastOnUndo?.let { undo ->
+                                    {
+                                        undo()
+                                        toastMessage = null
+                                        toastOnUndo = null
+                                    }
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.BottomCenter)
+                                    .padding(horizontal = 20.dp)
+                                    .padding(bottom = 110.dp),
+                            )
+                        }
 
-            AnimatedVisibility(
-                visible = showAddSheet,
-                enter = slideInVertically(initialOffsetY = { it }),
-                exit = slideOutVertically(targetOffsetY = { it }),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                AddTransactionScreen(
-                    viewModel = addTransactionViewModel,
-                    onClose = {
-                        addTransactionViewModel.startCreating()
-                        showAddSheet = false
-                    },
+                        TutuBottomBar(
+                            selectedTab = selectedTab,
+                            onTabSelected = { selectedTab = it },
+                            onAddClick = {
+                                addTransactionViewModel.startCreating()
+                                showAddSheet = true
+                            },
+                            pendingApprovalsCount = homeState.pendingBadgeCount,
+                            onPendingApprovalsClick = { showApprovalsSheet = true },
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
+
+                        BackHandler(enabled = showAddSheet) {
+                            addTransactionViewModel.startCreating()
+                            showAddSheet = false
+                        }
+                        AnimatedVisibility(
+                            visible = showAddSheet,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it }),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            AddTransactionScreen(
+                                viewModel = addTransactionViewModel,
+                                onClose = {
+                                    addTransactionViewModel.startCreating()
+                                    showAddSheet = false
+                                },
+                            )
+                        }
+
+                        BackHandler(enabled = showSpacesSheet) { showSpacesSheet = false }
+                        AnimatedVisibility(
+                            visible = showSpacesSheet,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it }),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            SpacesScreen(
+                                viewModel = spacesViewModel,
+                                onClose = { showSpacesSheet = false },
+                            )
+                        }
+
+                        BackHandler(enabled = showMembersSheet) { showMembersSheet = false }
+                        AnimatedVisibility(
+                            visible = showMembersSheet,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it }),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            MembersScreen(
+                                onClose = { showMembersSheet = false },
+                            )
+                        }
+
+                        BackHandler(enabled = showApprovalsSheet) { showApprovalsSheet = false }
+                        AnimatedVisibility(
+                            visible = showApprovalsSheet,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it }),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            ApprovalsScreen(
+                                onClose = { showApprovalsSheet = false },
+                            )
+                        }
+                    }
+                }
+                is AuthState.SignedOut -> LoginScreen(
+                    viewModel = authViewModel,
+                    modifier = Modifier.fillMaxSize(),
                 )
+                is AuthState.Loading -> Unit
             }
 
             AnimatedVisibility(

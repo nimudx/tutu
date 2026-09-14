@@ -5,4 +5,7 @@ data class SettingsUiState(
     val categoryCount: Int = 0,
     val notificationsEnabled: Boolean = true,
     val currencyLabel: String = "Soles (S/)",
+    val spaceName: String = "",
+    val approvalsHint: String = "Nadie las necesita",
+    val approvalsNeedsAttention: Boolean = false,
 )
