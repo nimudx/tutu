@@ -8,15 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -26,10 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,6 +36,7 @@ fun SettingsScreen(
     onOpenSpaces: () -> Unit,
     onOpenMembers: () -> Unit,
     onOpenApprovals: () -> Unit,
+    onOpenCategories: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = TutuViewModelFactory),
 ) {
@@ -68,11 +62,9 @@ fun SettingsScreen(
                 SettingsRow(label = state.spaceName.ifEmpty { "Sin espacio" }, onClick = onOpenSpaces) {
                     Text("Cambiar", color = colors.textTertiary, fontSize = 13.sp)
                 }
-                SettingsDivider(colors)
                 SettingsRow(label = "Miembros", onClick = onOpenMembers) {
                     Text("Ver", color = colors.textTertiary, fontSize = 13.sp)
                 }
-                SettingsDivider(colors)
                 SettingsRow(label = "Aprobaciones", onClick = onOpenApprovals) {
                     Text(
                         state.approvalsHint,
@@ -80,25 +72,16 @@ fun SettingsScreen(
                         fontSize = 13.sp,
                     )
                 }
+                SettingsRow(label = "Categorías", onClick = onOpenCategories) {
+                    Text(state.categoryCount.toString(), color = colors.textTertiary, fontSize = 13.sp)
+                }
+                SettingsRow(label = "Moneda") { Text(state.currencyLabel, color = colors.textTertiary, fontSize = 13.sp) }
             }
         }
 
         item {
             SettingsGroup(title = "Cuenta", colors = colors) {
                 SettingsRow(label = "Perfil") { Text("Editar", color = colors.textTertiary, fontSize = 13.sp) }
-                SettingsDivider(colors)
-                SettingsRow(label = "Moneda") { Text(state.currencyLabel, color = colors.textTertiary, fontSize = 13.sp) }
-                SettingsDivider(colors)
-                SettingsRow(label = "Cerrar sesión", onClick = onSignOut, destructive = true) {}
-            }
-        }
-
-        item {
-            SettingsGroup(title = "Preferencias", colors = colors) {
-                SettingsRow(label = "Gestionar categorías") {
-                    Text(state.categoryCount.toString(), color = colors.textTertiary, fontSize = 13.sp)
-                }
-                SettingsDivider(colors)
                 SettingsRow(label = "Notificaciones") {
                     Switch(
                         checked = state.notificationsEnabled,
@@ -106,15 +89,14 @@ fun SettingsScreen(
                         colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
                     )
                 }
-                SettingsDivider(colors)
-                SettingsRow(label = "Tema") {
-                    ThemeSegmentedControl(
-                        isDark = state.isDarkTheme,
-                        onDarkSelected = { viewModel.setDarkTheme(true) },
-                        onLightSelected = { viewModel.setDarkTheme(false) },
-                        colors = colors,
+                SettingsRow(label = "Tema oscuro") {
+                    Switch(
+                        checked = state.isDarkTheme,
+                        onCheckedChange = viewModel::setDarkTheme,
+                        colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
                     )
                 }
+                SettingsRow(label = "Cerrar sesión", onClick = onSignOut, destructive = true) {}
             }
         }
 
@@ -126,8 +108,7 @@ fun SettingsScreen(
 
         item {
             SettingsGroup(title = "Acerca de", colors = colors) {
-                SettingsRow(label = "Versión") { Text("1.0", color = colors.textTertiary, fontSize = 13.sp) }
-                SettingsDivider(colors)
+                SettingsRow(label = "Versión") { Text("1.1", color = colors.textTertiary, fontSize = 13.sp) }
                 SettingsRow(label = "Tutu") { Text("Hecho por Kerpun", color = colors.textTertiary, fontSize = 13.sp) }
             }
         }
@@ -136,16 +117,16 @@ fun SettingsScreen(
 
 @Composable
 private fun SettingsGroup(title: String, colors: TutuColors, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.padding(bottom = 20.dp)) {
-        Text(text = title, color = colors.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(colors.surface),
-        ) {
-            content()
-        }
+    Column(modifier = Modifier.padding(bottom = 28.dp)) {
+        Text(
+            text = title.uppercase(),
+            color = colors.textFaint,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.7.sp,
+            modifier = Modifier.padding(bottom = 6.dp),
+        )
+        content()
     }
 }
 
@@ -157,100 +138,32 @@ private fun SettingsRow(
     trailing: @Composable () -> Unit,
 ) {
     val colors = LocalTutuColors.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .let { base ->
-                if (onClick != null) {
-                    base.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = onClick,
-                    )
-                } else {
-                    base
+    Column {
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .let { base ->
+                    if (onClick != null) {
+                        base.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onClick,
+                        )
+                    } else {
+                        base
+                    }
                 }
-            }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = if (destructive) colors.expense else colors.textPrimary,
-            fontSize = 14.sp,
-            modifier = Modifier.weight(1f),
-        )
-        trailing()
+                .padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = label,
+                color = if (destructive) colors.expense else colors.textPrimary,
+                fontSize = 15.sp,
+                modifier = Modifier.weight(1f),
+            )
+            trailing()
+        }
     }
 }
-
-@Composable
-private fun SettingsDivider(colors: TutuColors) {
-    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border))
-}
-
-@Composable
-private fun ThemeSegmentedControl(
-    isDark: Boolean,
-    onDarkSelected: () -> Unit,
-    onLightSelected: () -> Unit,
-    colors: TutuColors,
-) {
-    Row(
-        modifier = Modifier
-            .width(140.dp)
-            .height(32.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(colors.bg)
-            .padding(2.dp),
-    ) {
-        ThemeOption(
-            label = "Oscuro",
-            selected = isDark,
-            accent = colors.accent,
-            textColor = colors.textSecondary,
-            onClick = onDarkSelected,
-        )
-        ThemeOption(
-            label = "Claro",
-            selected = !isDark,
-            accent = colors.accent,
-            textColor = colors.textSecondary,
-            onClick = onLightSelected,
-        )
-    }
-}
-
-@Composable
-private fun RowScope.ThemeOption(
-    label: String,
-    selected: Boolean,
-    accent: Color,
-    textColor: Color,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxSize()
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) accent else Color.Transparent)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = if (selected) colorOnAccent() else textColor,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-    }
-}
-
-@Composable
-private fun colorOnAccent(): Color = LocalTutuColors.current.bg

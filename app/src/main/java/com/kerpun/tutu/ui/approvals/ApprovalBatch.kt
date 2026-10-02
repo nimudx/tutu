@@ -12,9 +12,13 @@ import com.kerpun.tutu.ui.spaces.colorForMemberId
 import kotlinx.datetime.LocalDate
 
 data class ApprovalBatchItem(
+    val id: Long,
     val label: String,
+    val subLabel: String,
     val amountText: String,
     val amountColor: String,
+    val checked: Boolean,
+    val canToggle: Boolean,
 )
 
 data class ApprovalBatch(
@@ -36,6 +40,7 @@ data class ApprovalBatch(
 
 private const val INCOME_COLOR = "#3ECF7A"
 private const val EXPENSE_COLOR = "#FF6B6B"
+private const val VAULT_COLOR = "#4E8CFF"
 
 /**
  * Groups movements the viewer isn't free to just see-and-forget into "batches" — one per
@@ -50,6 +55,7 @@ fun List<Transaction>.toApprovalBatches(
     currentUserId: String?,
     isAdmin: Boolean,
     today: LocalDate,
+    uncheckedIds: Set<Long> = emptySet(),
 ): List<ApprovalBatch> {
     val pool = this.filter { tx ->
         val ownedByViewer = tx.createdBy == currentUserId
@@ -91,10 +97,19 @@ fun List<Transaction>.toApprovalBatches(
                 totalText = (if (net < 0) "- " else "+ ") + formatAmount(kotlin.math.abs(net)),
                 totalColor = if (net < 0) EXPENSE_COLOR else INCOME_COLOR,
                 items = items.map {
+                    val categoryName = categoriesById[it.categoryId]?.name ?: "Otros"
                     ApprovalBatchItem(
-                        label = it.description?.takeIf { d -> d.isNotBlank() } ?: categoriesById[it.categoryId]?.name ?: "Otros",
+                        id = it.id,
+                        label = it.description?.takeIf { d -> d.isNotBlank() } ?: categoryName,
+                        subLabel = categoryName,
                         amountText = formatAmount(it.amount),
-                        amountColor = categoriesById[it.categoryId]?.color ?: "#8A8F98",
+                        amountColor = when (it.type) {
+                            TransactionType.INCOME -> INCOME_COLOR
+                            TransactionType.EXPENSE -> EXPENSE_COLOR
+                            TransactionType.VAULT -> VAULT_COLOR
+                        },
+                        checked = canApprove && it.id !in uncheckedIds,
+                        canToggle = canApprove,
                     )
                 },
                 canApprove = canApprove,

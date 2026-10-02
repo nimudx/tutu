@@ -26,6 +26,9 @@ data class TutuColors(
     val cardText: Color,
     val cardLabel: Color,
     val cardBorder: Color,
+    /** Near-monochrome color for primary CTAs (Guardar, Crear espacio, Aprobar…) — not the blue accent. */
+    val ink: Color,
+    val inkForeground: Color,
 )
 
 val TutuDarkColors = TutuColors(
@@ -47,6 +50,8 @@ val TutuDarkColors = TutuColors(
     cardBorder = Color(0x29FFFFFF),
     pending = Color(0xFFF0A048),
     dot = Color(0x47F5F5F7),
+    ink = Color(0xFFF5F5F7),
+    inkForeground = Color(0xFF111214),
 )
 
 val TutuLightColors = TutuColors(
@@ -68,6 +73,8 @@ val TutuLightColors = TutuColors(
     cardBorder = Color(0x1A16171A),
     pending = Color(0xFF7A4300),
     dot = Color(0x3816171A),
+    ink = Color(0xFF16171A),
+    inkForeground = Color(0xFFFFFFFF),
 )
 
 val LocalTutuColors = staticCompositionLocalOf { TutuDarkColors }

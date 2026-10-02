@@ -9,11 +9,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -43,8 +43,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.kerpun.tutu.data.model.Space
 import com.kerpun.tutu.data.model.SpaceRole
-import com.kerpun.tutu.ui.common.AvatarStack
-import com.kerpun.tutu.ui.common.MemberAvatarUi
 import com.kerpun.tutu.ui.common.TutuViewModelFactory
 import com.kerpun.tutu.ui.common.toComposeColor
 import com.kerpun.tutu.ui.theme.LocalTutuColors
@@ -66,7 +64,8 @@ fun SpacesScreen(
         modifier = modifier
             .fillMaxSize()
             .background(colors.bg)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .navigationBarsPadding(),
         contentPadding = PaddingValues(
             start = 20.dp,
             end = 20.dp,
@@ -80,16 +79,7 @@ fun SpacesScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column {
-                    Text(text = "Espacios", color = colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Text(
-                        text = if (state.spaces.isEmpty()) "Creá tu primer espacio para empezar" else "Elegí en qué espacio querés trabajar",
-                        color = colors.textSecondary,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
+                Text(text = "Espacios", color = colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 if (onClose != null) {
                     Box(
                         modifier = Modifier
@@ -107,6 +97,16 @@ fun SpacesScreen(
                     }
                 }
             }
+        }
+
+        item {
+            Text(
+                text = "Cada espacio tiene sus propios movimientos, miembros y reglas.",
+                color = colors.textSecondary,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
+            )
         }
 
         if (onClose == null) {
@@ -139,22 +139,13 @@ fun SpacesScreen(
         }
 
         if (state.spaces.isNotEmpty()) {
-            item { Spacer(modifier = Modifier.height(18.dp)) }
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(colors.surface),
-                ) {
-                    state.spaces.forEachIndexed { index, space ->
-                        if (index > 0) {
-                            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border))
-                        }
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    state.spaces.forEach { space ->
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border))
                         SpaceRow(
                             space = space,
                             isActive = space.id == state.activeSpaceId,
-                            avatars = state.memberAvatarsBySpaceId[space.id] ?: emptyList(),
                             onClick = {
                                 viewModel.selectSpace(space.id)
                                 onClose?.invoke()
@@ -167,8 +158,15 @@ fun SpacesScreen(
         }
 
         item {
-            Column(modifier = Modifier.padding(top = 14.dp)) {
-                Text(text = "Crear espacio", color = colors.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))
+            Column(modifier = Modifier.padding(top = 30.dp)) {
+                Text(
+                    text = "CREAR ESPACIO",
+                    color = colors.textFaint,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.7.sp,
+                    modifier = Modifier.padding(bottom = 14.dp),
+                )
 
                 TextField(
                     value = formState.name,
@@ -225,7 +223,7 @@ fun SpacesScreen(
                         .padding(top = 16.dp)
                         .alpha(if (formState.canSubmit) 1f else 0.5f)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(colors.accent)
+                        .background(colors.ink)
                         .clickable(
                             enabled = formState.canSubmit,
                             interactionSource = remember { MutableInteractionSource() },
@@ -235,8 +233,15 @@ fun SpacesScreen(
                         .padding(vertical = 15.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = "Crear espacio", color = Color(0xFF04122E), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Crear espacio", color = colors.inkForeground, fontSize = 15.sp, fontWeight = FontWeight.Bold)
                 }
+                Text(
+                    text = "Serás el admin. Podrás invitar a quien quieras y decidir si sus movimientos necesitan tu aprobación.",
+                    color = colors.textTertiary,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    modifier = Modifier.padding(top = 12.dp),
+                )
             }
         }
     }
@@ -246,7 +251,6 @@ fun SpacesScreen(
 private fun SpaceRow(
     space: Space,
     isActive: Boolean,
-    avatars: List<MemberAvatarUi>,
     onClick: () -> Unit,
     colors: TutuColors,
 ) {
@@ -258,21 +262,21 @@ private fun SpaceRow(
                 indication = null,
                 onClick = onClick,
             )
-            .padding(14.dp),
+            .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .size(34.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(space.color.toComposeColor()),
             contentAlignment = Alignment.Center,
         ) {
             Text(
                 text = space.name.take(1).uppercase(),
                 color = Color.White,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
             )
         }
         Column(modifier = Modifier.weight(1f).padding(start = 12.dp)) {
@@ -281,15 +285,6 @@ private fun SpaceRow(
                 text = if (space.role == SpaceRole.ADMIN) "Admin" else "Miembro",
                 color = colors.textTertiary,
                 fontSize = 12.sp,
-            )
-        }
-        if (avatars.isNotEmpty()) {
-            AvatarStack(
-                avatars = avatars,
-                size = 24.dp,
-                borderColor = colors.surface,
-                fontSize = 10.sp,
-                modifier = Modifier.padding(start = 7.dp),
             )
         }
         if (isActive) {

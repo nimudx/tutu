@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.RectangleShape
@@ -105,7 +104,7 @@ fun TutuBottomBar(
                 .offset(x = (-22).dp, y = (-78).dp)
                 .size(58.dp)
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(Color(0xFF7FA8FF), colors.accent)))
+                .background(colors.ink)
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -118,14 +117,14 @@ fun TutuBottomBar(
                     .width(2.5.dp)
                     .height(19.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White),
+                    .background(colors.inkForeground),
             )
             Box(
                 modifier = Modifier
                     .width(19.dp)
                     .height(2.5.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(Color.White),
+                    .background(colors.inkForeground),
             )
         }
 

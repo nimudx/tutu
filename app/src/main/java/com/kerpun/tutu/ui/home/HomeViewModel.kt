@@ -17,15 +17,13 @@ import com.kerpun.tutu.data.repository.CategoryRepository
 import com.kerpun.tutu.data.repository.SpaceRepository
 import com.kerpun.tutu.data.repository.TransactionRepository
 import com.kerpun.tutu.ui.approvals.toApprovalBatches
-import com.kerpun.tutu.ui.common.AccentFixed
-import com.kerpun.tutu.ui.common.PendingAccent
 import com.kerpun.tutu.ui.common.TransactionToastEvent
 import com.kerpun.tutu.ui.common.TransactionUi
 import com.kerpun.tutu.ui.common.authorLabelFor
 import com.kerpun.tutu.ui.common.formatAmount
+import com.kerpun.tutu.ui.common.groupByDay
 import com.kerpun.tutu.ui.common.todayLocalDate
 import com.kerpun.tutu.ui.common.toAvatarUi
-import com.kerpun.tutu.ui.common.toComposeColor
 import com.kerpun.tutu.ui.common.toUi
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -42,8 +40,15 @@ import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.minus
 
-private const val RECENT_TRANSACTIONS_LIMIT = 5
+private const val RECENT_TRANSACTIONS_LIMIT = 6
 private const val WEEK_LENGTH_DAYS = 7
+private const val EXPENSE_TREND_COLOR = 0xFFFF6B6B
+private const val INCOME_TREND_COLOR = 0xFF3ECF7A
+
+private val monthNames = listOf(
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+)
 
 class HomeViewModel(
     private val transactionRepository: TransactionRepository,
@@ -137,25 +142,35 @@ class HomeViewModel(
         val summary = transactions.toBalanceSummary(categoriesById)
 
         val isAdmin = space?.role == SpaceRole.ADMIN
-        val recent = transactions
+        val recentGroups = transactions
             .filter { it.status == TransactionStatus.APPROVED || isAdmin || it.createdBy == userId }
             .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
             .take(RECENT_TRANSACTIONS_LIMIT)
             .map { it.toUi(categoriesById[it.categoryId], authorLabel = authorLabelFor(it.createdBy, members, userId)) }
+            .groupByDay()
 
         val pendingBatchCount = transactions
             .toApprovalBatches(categoriesById, members, userId, isAdmin, todayLocalDate())
             .count { it.isPending }
 
-        val cards = buildSummaryCards(transactions, categoriesById, summary.pending, isAdmin, pendingBatchCount, summary.vaultBalance)
+        val trend = buildTrendLine(transactions)
+        val totalMoved = summary.income + summary.expense
+        val incomeShare = if (totalMoved > 0) (summary.income / totalMoved).toFloat() else 0f
+        val expenseShare = if (totalMoved > 0) 1f - incomeShare else 0f
+        val today = todayLocalDate()
 
         return HomeUiState(
             balanceText = formatAmount(summary.availableBalance),
+            trendText = trend.first,
+            trendColor = trend.second,
+            monthLabel = "${monthNames[today.monthNumber - 1]} · este mes",
+            incomeShare = incomeShare,
+            expenseShare = expenseShare,
             incomeText = formatAmount(summary.income),
             expenseText = formatAmount(summary.expense),
             vaultText = formatAmount(summary.vaultBalance),
-            summaryCards = cards,
-            recentTransactions = recent,
+            hasVault = summary.vaultBalance > 0,
+            recentGroups = recentGroups,
             isLoading = false,
             spaceName = space?.name ?: "",
             spaceColor = space?.color ?: "#4E8CFF",
@@ -164,70 +179,8 @@ class HomeViewModel(
         )
     }
 
-    /** Mirrors the source design's summaryCards(): pending, weekly insight, top category, vault. */
-    private fun buildSummaryCards(
-        transactions: List<Transaction>,
-        categoriesById: Map<Long, Category>,
-        pendingTotal: Double,
-        isAdmin: Boolean,
-        pendingBatchCount: Int,
-        vaultBalance: Double,
-    ): List<SummaryCard> = buildList {
-        if (pendingTotal > 0) {
-            val body = if (isAdmin) {
-                val lotes = if (pendingBatchCount == 1) "lote" else "lotes"
-                "${formatAmount(pendingTotal)} por aprobar en $pendingBatchCount $lotes"
-            } else {
-                "${formatAmount(pendingTotal)} esperando aprobación"
-            }
-            add(
-                SummaryCard(
-                    key = "pending",
-                    glyph = "!",
-                    iconBg = PendingAccent.copy(alpha = 0.16f),
-                    iconFg = PendingAccent,
-                    body = body,
-                    clickable = true,
-                ),
-            )
-        }
-
-        add(
-            SummaryCard(
-                key = "week",
-                glyph = "~",
-                iconBg = AccentFixed.copy(alpha = 0.16f),
-                iconFg = AccentFixed,
-                body = buildWeeklyInsight(transactions),
-            ),
-        )
-
-        topCategory(transactions, categoriesById)?.let { (name, color, total) ->
-            add(
-                SummaryCard(
-                    key = "top",
-                    glyph = name.take(1).uppercase(),
-                    iconBg = Color.White.copy(alpha = 0.06f),
-                    iconFg = color.toComposeColor(),
-                    body = "Mayor gasto del mes: $name, ${formatAmount(total)}",
-                ),
-            )
-        }
-
-        if (vaultBalance > 0) {
-            add(
-                SummaryCard(
-                    key = "vault",
-                    glyph = "V",
-                    iconBg = AccentFixed.copy(alpha = 0.16f),
-                    iconFg = AccentFixed,
-                    body = "${formatAmount(vaultBalance)} guardados en el Vault",
-                ),
-            )
-        }
-    }
-
-    private fun buildWeeklyInsight(transactions: List<Transaction>): String {
+    /** This week's approved expenses vs. last week's, mirroring the source design's trendLine(). */
+    private fun buildTrendLine(transactions: List<Transaction>): Pair<String, Color?> {
         val today = todayLocalDate()
         val thisWeekStart = today.minus(WEEK_LENGTH_DAYS - 1, DateTimeUnit.DAY)
         val lastWeekEnd = today.minus(WEEK_LENGTH_DAYS, DateTimeUnit.DAY)
@@ -240,30 +193,14 @@ class HomeViewModel(
         val thisWeek = expenseBetween(thisWeekStart, today)
         val lastWeek = expenseBetween(lastWeekStart, lastWeekEnd)
 
+        if (thisWeek <= 0.0) return "Sin gastos esta semana" to null
+        val base = "${formatAmount(thisWeek)} esta semana"
+        if (lastWeek <= 0.0) return base to null
+        val diffPct = ((thisWeek - lastWeek) / lastWeek * 100).roundToInt()
         return when {
-            thisWeek <= 0.0 -> "Aún no hay gastos aprobados esta semana"
-            lastWeek <= 0.0 -> "Esta es su primera semana con gastos registrados"
-            else -> {
-                val diffPct = ((thisWeek - lastWeek) / lastWeek * 100).roundToInt()
-                when {
-                    diffPct > 0 -> "Esta semana gastaron $diffPct% más que la semana anterior"
-                    diffPct < 0 -> "Esta semana gastaron ${-diffPct}% menos que la semana anterior"
-                    else -> "Gastaron igual que la semana anterior"
-                }
-            }
+            diffPct == 0 -> "$base · igual que la anterior" to null
+            diffPct > 0 -> "$base · +$diffPct% vs. la anterior" to Color(EXPENSE_TREND_COLOR)
+            else -> "$base · $diffPct% vs. la anterior" to Color(INCOME_TREND_COLOR)
         }
-    }
-
-    /** All-time (not scoped to the current month, matching the source design's own logic). */
-    private fun topCategory(transactions: List<Transaction>, categoriesById: Map<Long, Category>): Triple<String, String, Double>? {
-        return transactions
-            .asSequence()
-            .filter { it.type == TransactionType.EXPENSE && it.status == TransactionStatus.APPROVED }
-            .groupBy { it.categoryId }
-            .mapNotNull { (categoryId, txs) ->
-                val category = categoriesById[categoryId] ?: return@mapNotNull null
-                Triple(category.name, category.color, txs.sumOf { it.amount })
-            }
-            .maxByOrNull { it.third }
     }
 }

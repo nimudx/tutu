@@ -3,8 +3,6 @@ package com.kerpun.tutu.ui.spaces
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kerpun.tutu.data.repository.SpaceRepository
-import com.kerpun.tutu.ui.common.MemberAvatarUi
-import com.kerpun.tutu.ui.common.toAvatarUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,15 +17,12 @@ class SpacesViewModel(
     private val activeSpaceId: MutableStateFlow<String?>,
 ) : ViewModel() {
 
-    private val memberAvatarsBySpaceId = MutableStateFlow<Map<String, List<MemberAvatarUi>>>(emptyMap())
-
     val uiState: StateFlow<SpacesUiState> = combine(
         spaceRepository.observeSpaces(),
         spaceRepository.observeIsLoading(),
         activeSpaceId,
-        memberAvatarsBySpaceId,
-    ) { spaces, isLoading, activeId, avatars ->
-        SpacesUiState(spaces = spaces, isLoading = isLoading, activeSpaceId = activeId, memberAvatarsBySpaceId = avatars)
+    ) { spaces, isLoading, activeId ->
+        SpacesUiState(spaces = spaces, isLoading = isLoading, activeSpaceId = activeId)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -39,18 +34,11 @@ class SpacesViewModel(
 
     init {
         // Once the user's spaces load, default to the first one if nothing is active yet
-        // (e.g. right after login, or after creating the very first space). Also fetches
-        // each space's member avatars, shown on its row in the list.
+        // (e.g. right after login, or after creating the very first space).
         viewModelScope.launch {
             spaceRepository.observeSpaces().collect { spaces ->
                 if (activeSpaceId.value == null && spaces.isNotEmpty()) {
                     activeSpaceId.value = spaces.first().id
-                }
-                memberAvatarsBySpaceId.value = spaces.associate { space ->
-                    val avatars = runCatching { spaceRepository.listMembers(space.id) }
-                        .getOrElse { emptyList() }
-                        .map { it.toAvatarUi() }
-                    space.id to avatars
                 }
             }
         }

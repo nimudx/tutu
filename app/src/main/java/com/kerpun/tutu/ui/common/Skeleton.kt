@@ -78,56 +78,20 @@ fun SkeletonBlock(
     Box(modifier = modifier.clip(shape).background(brush))
 }
 
-/** Matches the design's balance-card skeleton: two bars, a divider, and two stat columns. */
-@Composable
-fun BalanceCardSkeleton(brush: Brush, modifier: Modifier = Modifier) {
-    val colors = LocalTutuColors.current
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
-            .background(colors.surface)
-            .padding(24.dp),
-    ) {
-        SkeletonBlock(width = 100.dp, height = 11.dp, brush = brush, shape = RoundedCornerShape(6.dp))
-        Box(modifier = Modifier.padding(top = 16.dp)) {
-            SkeletonBlock(width = 180.dp, height = 34.dp, brush = brush, shape = RoundedCornerShape(8.dp))
-        }
-        Box(
-            modifier = Modifier
-                .padding(top = 20.dp, bottom = 18.dp)
-                .fillMaxWidth()
-                .height(1.dp)
-                .background(colors.border),
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-            repeat(2) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SkeletonBlock(width = 50.dp, height = 9.dp, brush = brush, shape = RoundedCornerShape(5.dp))
-                    SkeletonBlock(width = 70.dp, height = 14.dp, brush = brush, shape = RoundedCornerShape(6.dp))
-                }
-            }
-        }
-    }
-}
-
-/** Matches the design's transaction-row skeleton: icon + two text lines + amount. */
+/** Matches the flat transaction row: neutral chip + two text lines + amount, no card background. */
 @Composable
 fun TransactionRowSkeleton(brush: Brush, modifier: Modifier = Modifier) {
-    val colors = LocalTutuColors.current
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(colors.surface)
-            .padding(14.dp),
+            .padding(vertical = 12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .size(34.dp)
+                .clip(RoundedCornerShape(11.dp))
                 .background(brush),
         )
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {

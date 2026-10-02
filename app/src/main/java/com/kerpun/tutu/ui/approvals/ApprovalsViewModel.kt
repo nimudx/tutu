@@ -3,8 +3,10 @@ package com.kerpun.tutu.ui.approvals
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.kerpun.tutu.data.model.AuthState
+import com.kerpun.tutu.data.model.Category
 import com.kerpun.tutu.data.model.SpaceMember
 import com.kerpun.tutu.data.model.SpaceRole
+import com.kerpun.tutu.data.model.Transaction
 import com.kerpun.tutu.data.model.toBalanceSummary
 import com.kerpun.tutu.data.repository.AuthRepository
 import com.kerpun.tutu.data.repository.CategoryRepository
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class ApprovalsViewModel(
@@ -35,6 +38,14 @@ class ApprovalsViewModel(
         spaces.find { it.id == id }
     }
 
+    /** Transaction ids the admin deselected from the default "everything checked" bulk approval. */
+    private val uncheckedIds = MutableStateFlow<Set<Long>>(emptySet())
+
+    private val transactionsAndCategories = combine(
+        transactionRepository.observeTransactions(),
+        categoryRepository.observeCategories(),
+    ) { transactions, categories -> transactions to categories }
+
     init {
         viewModelScope.launch {
             activeSpaceId.collect { spaceId ->
@@ -48,17 +59,18 @@ class ApprovalsViewModel(
     }
 
     val uiState: StateFlow<ApprovalsUiState> = combine(
-        transactionRepository.observeTransactions(),
-        categoryRepository.observeCategories(),
+        transactionsAndCategories,
         spaceMembers,
         currentUserId,
         activeSpace,
-    ) { transactions, categories, members, userId, space ->
+        uncheckedIds,
+    ) { (transactions, categories), members, userId, space, unchecked ->
         val isAdmin = space?.role == SpaceRole.ADMIN
         val categoriesById = categories.associateBy { it.id }
-        val batches = transactions.toApprovalBatches(categoriesById, members, userId, isAdmin, todayLocalDate())
+        val batches = transactions.toApprovalBatches(categoriesById, members, userId, isAdmin, todayLocalDate(), unchecked)
         val pendingCount = batches.count { it.isPending }
         val pendingTotal = transactions.toBalanceSummary(categoriesById).pending
+        val selectedIds = batches.flatMap { it.items }.filter { it.checked }.map { it.id }
 
         ApprovalsUiState(
             spaceName = space?.name ?: "",
@@ -75,6 +87,8 @@ class ApprovalsViewModel(
                 null
             },
             isLoading = false,
+            selectedCount = selectedIds.size,
+            approveBarVisible = isAdmin && selectedIds.isNotEmpty(),
         )
     }.stateIn(
         scope = viewModelScope,
@@ -82,11 +96,27 @@ class ApprovalsViewModel(
         initialValue = ApprovalsUiState(),
     )
 
-    fun approve(batch: ApprovalBatch) {
-        viewModelScope.launch { transactionRepository.reviewTransactions(batch.ids, approve = true) }
+    fun toggleItem(id: Long) {
+        uncheckedIds.update { current -> if (id in current) current - id else current + id }
     }
 
-    fun reject(batch: ApprovalBatch) {
-        viewModelScope.launch { transactionRepository.reviewTransactions(batch.ids, approve = false) }
+    private fun selectedIds(): List<Long> = uiState.value.batches.flatMap { it.items }.filter { it.checked }.map { it.id }
+
+    fun approveSelected() {
+        val ids = selectedIds()
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            transactionRepository.reviewTransactions(ids, approve = true)
+            uncheckedIds.value = emptySet()
+        }
+    }
+
+    fun rejectSelected() {
+        val ids = selectedIds()
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            transactionRepository.reviewTransactions(ids, approve = false)
+            uncheckedIds.value = emptySet()
+        }
     }
 }

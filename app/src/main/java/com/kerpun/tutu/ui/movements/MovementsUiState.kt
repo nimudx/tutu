@@ -1,6 +1,6 @@
 package com.kerpun.tutu.ui.movements
 
-import com.kerpun.tutu.ui.common.TransactionUi
+import com.kerpun.tutu.ui.common.TransactionGroup
 
 enum class MovementsFilter {
     ALL,
@@ -11,6 +11,6 @@ enum class MovementsFilter {
 
 data class MovementsUiState(
     val filter: MovementsFilter = MovementsFilter.ALL,
-    val transactions: List<TransactionUi> = emptyList(),
+    val groups: List<TransactionGroup> = emptyList(),
     val isLoading: Boolean = true,
 )

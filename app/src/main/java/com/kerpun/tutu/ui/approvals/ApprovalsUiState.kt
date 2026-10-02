@@ -7,4 +7,6 @@ data class ApprovalsUiState(
     val batches: List<ApprovalBatch> = emptyList(),
     val emptyText: String? = null,
     val isLoading: Boolean = true,
+    val selectedCount: Int = 0,
+    val approveBarVisible: Boolean = false,
 )

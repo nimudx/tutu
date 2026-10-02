@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Empty on purpose: satisfies windowSplashScreenAnimatedIcon's required attribute
      without showing a logo, since the OS icon safe-zone scaling clips/distorts our
-     mark inconsistently across devices. The real animated logo is the Compose
-     SplashOverlay shown immediately after. -->
+     mark inconsistently across devices. The splash background color alone
+     (windowSplashScreenBackground, #111214) carries the brand until the app draws. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="1dp"
     android:height="1dp"
