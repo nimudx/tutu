@@ -6,6 +6,7 @@ import com.kerpun.tutu.data.AppContainer
 import com.kerpun.tutu.ui.addtransaction.AddTransactionViewModel
 import com.kerpun.tutu.ui.approvals.ApprovalsViewModel
 import com.kerpun.tutu.ui.auth.AuthViewModel
+import com.kerpun.tutu.ui.categories.CategoriesViewModel
 import com.kerpun.tutu.ui.home.HomeViewModel
 import com.kerpun.tutu.ui.members.MembersViewModel
 import com.kerpun.tutu.ui.movements.MovementsViewModel
@@ -28,6 +29,14 @@ val TutuViewModelFactory = viewModelFactory {
     initializer { AuthViewModel(AppContainer.authRepository) }
     initializer { SpacesViewModel(AppContainer.spaceRepository, AppContainer.activeSpaceId) }
     initializer { MembersViewModel(AppContainer.spaceRepository, AppContainer.authRepository, AppContainer.activeSpaceId) }
+    initializer {
+        CategoriesViewModel(
+            AppContainer.categoryRepository,
+            AppContainer.transactionRepository,
+            AppContainer.spaceRepository,
+            AppContainer.activeSpaceId,
+        )
+    }
     initializer {
         ApprovalsViewModel(
             AppContainer.transactionRepository,

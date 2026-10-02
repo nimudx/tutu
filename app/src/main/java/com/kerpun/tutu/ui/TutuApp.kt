@@ -2,7 +2,6 @@ package com.kerpun.tutu.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -25,11 +24,14 @@ import com.kerpun.tutu.ui.addtransaction.AddTransactionScreen
 import com.kerpun.tutu.ui.addtransaction.AddTransactionViewModel
 import com.kerpun.tutu.ui.approvals.ApprovalsScreen
 import com.kerpun.tutu.ui.auth.AuthViewModel
+import com.kerpun.tutu.ui.categories.CategoriesScreen
 import com.kerpun.tutu.ui.auth.LoginScreen
 import com.kerpun.tutu.ui.common.ToastBanner
+import com.kerpun.tutu.ui.common.TransactionInteractionsOverlay
 import com.kerpun.tutu.ui.common.TutuBottomBar
 import com.kerpun.tutu.ui.common.TutuTab
 import com.kerpun.tutu.ui.common.TutuViewModelFactory
+import com.kerpun.tutu.ui.common.rememberTransactionInteractions
 import com.kerpun.tutu.ui.home.HomeScreen
 import com.kerpun.tutu.ui.home.HomeViewModel
 import com.kerpun.tutu.ui.members.MembersScreen
@@ -39,14 +41,12 @@ import com.kerpun.tutu.ui.settings.SettingsScreen
 import com.kerpun.tutu.ui.settings.SettingsViewModel
 import com.kerpun.tutu.ui.spaces.SpacesScreen
 import com.kerpun.tutu.ui.spaces.SpacesViewModel
-import com.kerpun.tutu.ui.splash.SplashOverlay
 import com.kerpun.tutu.ui.theme.LocalTutuColors
 import com.kerpun.tutu.ui.theme.TutuTheme
 import kotlinx.coroutines.delay
 
 private const val SAVE_TOAST_DURATION_MS = 2_200L
 private const val UNDO_TOAST_DURATION_MS = 4_000L
-private const val SPLASH_DURATION_MS = 1_600L
 
 @Composable
 fun TutuApp() {
@@ -68,14 +68,10 @@ fun TutuApp() {
         var showSpacesSheet by remember { mutableStateOf(false) }
         var showMembersSheet by remember { mutableStateOf(false) }
         var showApprovalsSheet by remember { mutableStateOf(false) }
+        var showCategoriesSheet by remember { mutableStateOf(false) }
+        val transactionInteractions = rememberTransactionInteractions()
         var toastMessage by remember { mutableStateOf<String?>(null) }
         var toastOnUndo by remember { mutableStateOf<(() -> Unit)?>(null) }
-        var splashVisible by remember { mutableStateOf(true) }
-
-        LaunchedEffect(Unit) {
-            delay(SPLASH_DURATION_MS)
-            splashVisible = false
-        }
 
         LaunchedEffect(sessionState) {
             if (sessionState is AuthState.SignedOut) {
@@ -84,6 +80,7 @@ fun TutuApp() {
                 showSpacesSheet = false
                 showMembersSheet = false
                 showApprovalsSheet = false
+                showCategoriesSheet = false
             }
         }
 
@@ -93,6 +90,7 @@ fun TutuApp() {
                 showSpacesSheet = false
                 showMembersSheet = false
                 showApprovalsSheet = false
+                showCategoriesSheet = false
             }
         }
 
@@ -147,33 +145,15 @@ fun TutuApp() {
                         when (selectedTab) {
                             TutuTab.HOME -> HomeScreen(
                                 viewModel = homeViewModel,
-                                onEditTransaction = { transaction ->
-                                    addTransactionViewModel.startEditing(
-                                        id = transaction.id,
-                                        type = transaction.type,
-                                        amount = transaction.amount,
-                                        categoryId = transaction.categoryId,
-                                        description = transaction.description,
-                                    )
-                                    showAddSheet = true
-                                },
+                                interactions = transactionInteractions,
                                 onOpenSpaces = { showSpacesSheet = true },
                                 onOpenMembers = { showMembersSheet = true },
-                                onOpenApprovals = { showApprovalsSheet = true },
+                                onGoMovements = { selectedTab = TutuTab.MOVEMENTS },
                                 modifier = Modifier.fillMaxSize(),
                             )
                             TutuTab.MOVEMENTS -> MovementsScreen(
                                 viewModel = movementsViewModel,
-                                onEditTransaction = { transaction ->
-                                    addTransactionViewModel.startEditing(
-                                        id = transaction.id,
-                                        type = transaction.type,
-                                        amount = transaction.amount,
-                                        categoryId = transaction.categoryId,
-                                        description = transaction.description,
-                                    )
-                                    showAddSheet = true
-                                },
+                                interactions = transactionInteractions,
                                 modifier = Modifier.fillMaxSize(),
                             )
                             TutuTab.SETTINGS -> SettingsScreen(
@@ -182,6 +162,7 @@ fun TutuApp() {
                                 onOpenSpaces = { showSpacesSheet = true },
                                 onOpenMembers = { showMembersSheet = true },
                                 onOpenApprovals = { showApprovalsSheet = true },
+                                onOpenCategories = { showCategoriesSheet = true },
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }
@@ -270,6 +251,39 @@ fun TutuApp() {
                                 onClose = { showApprovalsSheet = false },
                             )
                         }
+
+                        BackHandler(enabled = showCategoriesSheet) { showCategoriesSheet = false }
+                        AnimatedVisibility(
+                            visible = showCategoriesSheet,
+                            enter = slideInVertically(initialOffsetY = { it }),
+                            exit = slideOutVertically(targetOffsetY = { it }),
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            CategoriesScreen(
+                                onClose = { showCategoriesSheet = false },
+                            )
+                        }
+
+                        TransactionInteractionsOverlay(
+                            state = transactionInteractions,
+                            onEdit = { transaction ->
+                                addTransactionViewModel.startEditing(
+                                    id = transaction.id,
+                                    type = transaction.type,
+                                    amount = transaction.amount,
+                                    categoryId = transaction.categoryId,
+                                    description = transaction.description,
+                                )
+                                showAddSheet = true
+                            },
+                            onDelete = { transaction ->
+                                if (selectedTab == TutuTab.MOVEMENTS) {
+                                    movementsViewModel.deleteTransaction(transaction)
+                                } else {
+                                    homeViewModel.deleteTransaction(transaction)
+                                }
+                            },
+                        )
                     }
                 }
                 is AuthState.SignedOut -> LoginScreen(
@@ -277,14 +291,6 @@ fun TutuApp() {
                     modifier = Modifier.fillMaxSize(),
                 )
                 is AuthState.Loading -> Unit
-            }
-
-            AnimatedVisibility(
-                visible = splashVisible,
-                exit = fadeOut(),
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                SplashOverlay()
             }
         }
     }

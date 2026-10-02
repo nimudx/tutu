@@ -10,7 +10,7 @@ import com.kerpun.tutu.ui.TutuApp
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // No keep-on-screen condition: the native splash dismisses the instant
-        // Compose draws its first frame, handing off to SplashOverlay immediately.
+        // Compose draws its first frame — it's the only splash screen the app shows.
         installSplashScreen().setKeepOnScreenCondition { false }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

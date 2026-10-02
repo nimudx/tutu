@@ -8,4 +8,3 @@ import androidx.compose.ui.graphics.Color
  * background rather than directly on the app bg, so it never needs to darken for contrast.
  */
 val PendingAccent = Color(0xFFF0A048)
-val AccentFixed = Color(0xFF4E8CFF)

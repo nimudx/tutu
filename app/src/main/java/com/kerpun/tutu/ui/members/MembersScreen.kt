@@ -8,11 +8,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -39,7 +39,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,7 +66,8 @@ fun MembersScreen(
         modifier = modifier
             .fillMaxSize()
             .background(colors.bg)
-            .statusBarsPadding(),
+            .statusBarsPadding()
+            .navigationBarsPadding(),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 24.dp, bottom = 30.dp),
     ) {
         item {
@@ -76,7 +76,28 @@ fun MembersScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(text = "Miembros", color = colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(text = "Miembros", color = colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.padding(top = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(state.spaceColor.toComposeColor()),
+                        )
+                        Text(
+                            text = "${state.spaceName} · ${state.members.size} ${if (state.members.size == 1) "miembro" else "miembros"}",
+                            color = colors.textTertiary,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(start = 6.dp),
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .size(32.dp)
@@ -109,11 +130,9 @@ fun MembersScreen(
 
         item {
             var openMemberId by remember { mutableStateOf<String?>(null) }
-            Column(modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(colors.surface)) {
-                state.members.forEachIndexed { index, member ->
-                    if (index > 0) {
-                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border))
-                    }
+            Column {
+                state.members.forEach { member ->
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border))
                     val isSelf = member.userId == state.currentUserId
                     val canGate = state.isCurrentUserAdmin && !isSelf
                     MemberRow(
@@ -142,8 +161,15 @@ fun MembersScreen(
 
         if (state.isCurrentUserAdmin) {
             item {
-                Column(modifier = Modifier.padding(top = 14.dp)) {
-                    Text(text = "Invitar miembro", color = colors.textSecondary, fontSize = 13.sp, modifier = Modifier.padding(bottom = 10.dp))
+                Column(modifier = Modifier.padding(top = 30.dp)) {
+                    Text(
+                        text = "INVITAR MIEMBRO",
+                        color = colors.textFaint,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.7.sp,
+                        modifier = Modifier.padding(bottom = 14.dp),
+                    )
 
                     TextField(
                         value = inviteForm.email,
@@ -163,25 +189,22 @@ fun MembersScreen(
                     )
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(colors.surface)
-                            .padding(2.dp),
+                        modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        InviteRoleOption(
-                            label = "Miembro",
-                            selected = inviteForm.role == SpaceRole.MEMBER,
-                            colors = colors,
-                            onClick = { if (inviteForm.role != SpaceRole.MEMBER) viewModel.toggleInviteRole() },
-                        )
-                        InviteRoleOption(
-                            label = "Admin",
-                            selected = inviteForm.role == SpaceRole.ADMIN,
-                            colors = colors,
-                            onClick = { if (inviteForm.role != SpaceRole.ADMIN) viewModel.toggleInviteRole() },
+                        Column(modifier = Modifier.weight(1f).padding(end = 10.dp)) {
+                            Text(text = "Entra como admin", color = colors.textPrimary, fontSize = 14.5.sp)
+                            Text(
+                                text = "Podrá invitar y aprobar movimientos",
+                                color = colors.textTertiary,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(top = 2.dp),
+                            )
+                        }
+                        Switch(
+                            checked = inviteForm.role == SpaceRole.ADMIN,
+                            onCheckedChange = { viewModel.toggleInviteRole() },
+                            colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
                         )
                     }
 
@@ -192,10 +215,10 @@ fun MembersScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 14.dp)
+                            .padding(top = 18.dp)
                             .alpha(if (inviteForm.canSubmit) 1f else 0.5f)
                             .clip(RoundedCornerShape(16.dp))
-                            .background(colors.accent)
+                            .background(colors.ink)
                             .clickable(
                                 enabled = inviteForm.canSubmit,
                                 interactionSource = remember { MutableInteractionSource() },
@@ -205,28 +228,29 @@ fun MembersScreen(
                             .padding(vertical = 15.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(text = "Invitar", color = Color(0xFF04122E), fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Text(text = "Enviar invitación", color = colors.inkForeground, fontSize = 15.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
         item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 26.dp)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(colors.surface)
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null,
-                        onClick = viewModel::leaveSpace,
-                    )
-                    .padding(vertical = 15.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(text = "Salir del espacio", color = colors.expense, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Column(modifier = Modifier.padding(top = 30.dp)) {
+                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(colors.border))
+                Text(
+                    text = "Salir del espacio",
+                    color = colors.expense,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = viewModel::leaveSpace,
+                        )
+                        .padding(vertical = 14.dp),
+                )
             }
         }
     }
@@ -250,17 +274,17 @@ private fun MemberRow(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(34.dp)
                     .clip(CircleShape)
                     .background(avatarColor.toComposeColor()),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = member.email.take(1).uppercase(), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(text = member.email.take(1).uppercase(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
 
             Column(
@@ -278,10 +302,12 @@ private fun MemberRow(
                 )
             }
 
-            Box(
+            Text(
+                text = if (member.role == SpaceRole.ADMIN) "Admin" else "Miembro",
+                color = if (member.role == SpaceRole.ADMIN) colors.accent else colors.textTertiary,
+                fontSize = 12.5.sp,
+                fontWeight = FontWeight.Bold,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (member.role == SpaceRole.ADMIN) colors.accent else colors.surface2)
                     .let { base ->
                         if (canManage && !isSelf) {
                             base.clickable(
@@ -292,16 +318,8 @@ private fun MemberRow(
                         } else {
                             base
                         }
-                    }
-                    .padding(horizontal = 11.dp, vertical = 6.dp),
-            ) {
-                Text(
-                    text = if (member.role == SpaceRole.ADMIN) "Admin" else "Miembro",
-                    color = if (member.role == SpaceRole.ADMIN) colors.bg else colors.textSecondary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
+                    },
+            )
 
             if (canGate) {
                 Box(
@@ -325,7 +343,7 @@ private fun MemberRow(
         }
 
         if (isOpen) {
-            Column(modifier = Modifier.padding(start = 64.dp, end = 16.dp, bottom = 14.dp)) {
+            Column(modifier = Modifier.padding(start = 46.dp, end = 4.dp, bottom = 14.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -359,30 +377,5 @@ private fun MemberRow(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun RowScope.InviteRoleOption(label: String, selected: Boolean, colors: TutuColors, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .weight(1f)
-            .fillMaxSize()
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) colors.accent else Color.Transparent)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = onClick,
-            ),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = label,
-            color = if (selected) colors.bg else colors.textSecondary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
     }
 }

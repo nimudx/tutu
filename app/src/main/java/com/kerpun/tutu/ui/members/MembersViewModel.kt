@@ -33,9 +33,17 @@ class MembersViewModel(
     init {
         viewModelScope.launch {
             combine(activeSpaceId, spaceRepository.observeSpaces(), authRepository.observeAuthState()) { spaceId, spaces, session ->
-                Triple(spaceId, spaces.find { it.id == spaceId }?.role, (session as? AuthState.SignedIn)?.userId)
-            }.collect { (spaceId, myRole, myUserId) ->
-                members.update { it.copy(isCurrentUserAdmin = myRole == SpaceRole.ADMIN, currentUserId = myUserId) }
+                val space = spaces.find { it.id == spaceId }
+                Triple(spaceId, space, (session as? AuthState.SignedIn)?.userId)
+            }.collect { (spaceId, space, myUserId) ->
+                members.update {
+                    it.copy(
+                        isCurrentUserAdmin = space?.role == SpaceRole.ADMIN,
+                        currentUserId = myUserId,
+                        spaceName = space?.name ?: "",
+                        spaceColor = space?.color ?: "#4E8CFF",
+                    )
+                }
                 if (spaceId != null) {
                     refresh(spaceId)
                 } else {

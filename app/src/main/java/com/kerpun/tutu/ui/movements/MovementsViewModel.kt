@@ -15,6 +15,7 @@ import com.kerpun.tutu.data.repository.TransactionRepository
 import com.kerpun.tutu.ui.common.TransactionToastEvent
 import com.kerpun.tutu.ui.common.TransactionUi
 import com.kerpun.tutu.ui.common.authorLabelFor
+import com.kerpun.tutu.ui.common.groupByDay
 import com.kerpun.tutu.ui.common.toUi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -81,7 +82,7 @@ class MovementsViewModel(
                 .filter { matchesFilter(it, currentFilter) }
                 .sortedWith(compareByDescending<Transaction> { it.occurredAt }.thenByDescending { it.id })
                 .map { it.toUi(categoriesById[it.categoryId], authorLabel = authorLabelFor(it.createdBy, members, userId)) }
-            MovementsUiState(filter = currentFilter, transactions = filtered, isLoading = false)
+            MovementsUiState(filter = currentFilter, groups = filtered.groupByDay(), isLoading = false)
         }
     }.stateIn(
         scope = viewModelScope,

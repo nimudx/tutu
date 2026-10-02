@@ -9,6 +9,8 @@ data class MembersUiState(
     val isCurrentUserAdmin: Boolean = false,
     val currentUserId: String? = null,
     val errorMessage: String? = null,
+    val spaceName: String = "",
+    val spaceColor: String = "#4E8CFF",
 )
 
 data class InviteFormState(

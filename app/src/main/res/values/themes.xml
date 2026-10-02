@@ -7,8 +7,10 @@
         <!-- android:windowBackground is redundant with windowSplashScreenBackground below,
              but some OEM skins (MIUI) paint the very first frame from windowBackground
              instead of the splash-screen attribute, showing black otherwise. -->
-        <item name="android:windowBackground">#3D75E0</item>
-        <item name="windowSplashScreenBackground">#3D75E0</item>
+        <!-- Matches TutuDarkColors.bg: the app's own near-black "ink" tone,
+             not the old blue brand color. -->
+        <item name="android:windowBackground">#111214</item>
+        <item name="windowSplashScreenBackground">#111214</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_transparent</item>
         <item name="postSplashScreenTheme">@style/Theme.Tutu</item>
     </style>
